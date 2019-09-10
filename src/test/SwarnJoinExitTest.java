@@ -1,4 +1,6 @@
-package PNPLibrary;
+package test;
+
+import PNPLibrary.NetworkManger;
 
 import java.io.IOException;
 

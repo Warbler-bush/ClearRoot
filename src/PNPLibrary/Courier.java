@@ -8,6 +8,9 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
+/*------------------------------------------------------------------------------------*/
+/* COURIER                                                                           */
+/*------------------------------------------------------------------------------------*/
 
 
 class Courier {
@@ -30,7 +33,7 @@ class Courier {
 
     public void join_swarn(String ip_peer) throws IOException {
 
-        client.connect(ip_peer, NetworkManger.Tracker.PORT);
+        client.connect(ip_peer, Tracker.PORT);
         client.send(PSPacket.SWJ_MSG_C().toBinary());
         PSPacket packet = PSPacket.toPacket( client.receive() );
 
@@ -46,7 +49,7 @@ class Courier {
 
 
     public void exit_swarn(String ip_peer) throws Exception {
-        client.connect(ip_peer,NetworkManger.Tracker.PORT);
+        client.connect(ip_peer,Tracker.PORT);
         client.send(PSPacket.SWE_MSG_C().toBinary());
         client.disconnect();
 
@@ -514,6 +517,15 @@ class Courier {
 
 }
 
+
+
+
+
+/*------------------------------------------------------------------------------------*/
+/* TRACKERCOURIER*/
+/**/
+/*------------------------------------------------------------------------------------*/
+
 class TrackerCourier extends Courier{
 
     public TrackerCourier(Socket client) throws IOException{
@@ -534,6 +546,14 @@ class TrackerCourier extends Courier{
     }
 
 }
+
+
+
+
+/*------------------------------------------------------------------------------------*/
+/* simple client and server socket                                                    */
+/*------------------------------------------------------------------------------------*/
+
 
 class ClientSocket_n  {
 
@@ -587,7 +607,7 @@ class ClientSocket_n  {
 class ServerSocket_n extends Thread {
     private ServerSocket serverSocket;
 
-    public void startServer(int port) throws IOException {
+    public void startServer(int port ) throws IOException {
         /*backlog is the same argument of listen() in the berkley socket*/
         serverSocket =  new ServerSocket(port);;
         while (true)
