@@ -2,36 +2,35 @@ package PNPLibrary;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
+
+
 class Courier {
     protected ClientSocket_n client;
     private ServerSocket_n server;
-
-
     // Peer port
-    private static final int PORT = 8440;
+    public static final int PORT = 8440;
 
-    public Courier() throws IOException {
+    public Courier() {
         client = new ClientSocket_n();
-        server = new ServerSocket_n();
-        server.start(PORT);
     }
+
 
     public void connect(String ip, int port) throws IOException {
         client.connect( ip,port);
     }
 
+    /* Asking the tracker if the peer can enter the p2p network,
+    * after having the permission the peer start to listen to the 8440 port*/
 
     public void join_swarn(String ip_peer) throws IOException {
-        client.connect(ip_peer,NetworkManger.Tracker.PORT);
+
+        client.connect(ip_peer, NetworkManger.Tracker.PORT);
         client.send(PSPacket.SWJ_MSG_C().toBinary());
         PSPacket packet = PSPacket.toPacket( client.receive() );
 
@@ -39,18 +38,20 @@ class Courier {
             throw new IOException();
 
         client.disconnect();
+        System.out.println("Connected to the swarn");
+
+        server = new ServerSocket_n();
+        new Thread(server).start();
     }
 
 
-    public void exit_swarn(String ip_peer) throws IOException {
+    public void exit_swarn(String ip_peer) throws Exception {
         client.connect(ip_peer,NetworkManger.Tracker.PORT);
         client.send(PSPacket.SWE_MSG_C().toBinary());
         client.disconnect();
+
+        server.stopRunning();
     }
-
-
-
-
 
     protected static class  PSPacket {
 
@@ -197,7 +198,21 @@ class Courier {
             this.data = new byte[0];
         }
 
-        private PSPacket(){ }
+        private PSPacket(){
+            id = ID_COUNTER++;
+
+            //clone creates a new Pointer and copy the elements of the old pointer, so if the
+            //elements are ereferences it copies the references, if they are value it simply copies the value
+            this.type = new char[3];
+            this.safezone_id = 0;
+            this.flags = NONE;
+            //initialize all automatically with 0
+            this.password = new byte[PASS_DIM];
+            this.filename_length = 0;
+            this.filename = "";
+            this.data = new byte[0];
+
+        }
 
         /*-----------------------------------------------------*/
         /* GETTERS AND SETTERS                                 */
@@ -332,12 +347,13 @@ class Courier {
 
             ByteBuffer buffer = ByteBuffer.wrap(binary);
             packet.id = buffer.getInt();
-            packet.safezone_id = buffer.getInt();
 
             packet.type[0] = buffer.getChar();
             packet.type[1] = buffer.getChar();
             packet.type[2] = buffer.getChar();
 
+
+            packet.safezone_id = buffer.getInt();
             buffer.get(packet.password, 0, PASS_DIM);
             packet.filename_length = buffer.getInt();
 
@@ -496,10 +512,7 @@ class Courier {
         }
     }
 
-
 }
-
-
 
 class TrackerCourier extends Courier{
 
@@ -528,17 +541,13 @@ class ClientSocket_n  {
     private DataOutputStream dOut ;
     private DataInputStream dIn;
 
-
-
     public ClientSocket_n(Socket sock) throws IOException {
         this.socket = sock;
         dOut = new DataOutputStream(socket.getOutputStream());
         dIn = new DataInputStream(socket.getInputStream());
     }
 
-    public ClientSocket_n(){
-
-    }
+    public ClientSocket_n(){ }
 
     public void connect(String ip, int port) throws IOException{
         socket = new Socket(ip, port);
@@ -575,23 +584,28 @@ class ClientSocket_n  {
 
 }
 
-
-class ServerSocket_n {
+class ServerSocket_n extends Thread {
     private ServerSocket serverSocket;
 
-    public void start(int port) throws IOException {
-
+    public void startServer(int port) throws IOException {
         /*backlog is the same argument of listen() in the berkley socket*/
-        serverSocket =  new ServerSocket(port,50, InetAddress.getByName("0.0.0.0"));;
+        serverSocket =  new ServerSocket(port);;
         while (true)
             new ClientHandler(serverSocket.accept()).start();
     }
 
-    public void stop() throws Exception {
+    public void stopRunning() throws Exception {
         serverSocket.close();
     }
 
-
+    @Override
+    public void run() {
+        try {
+            startServer(Courier.PORT);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
 
     private static class ClientHandler extends Thread{
@@ -622,10 +636,20 @@ class ServerSocket_n {
             return null;
         }
 
-
         /* When the peer receive a request*/
         public void run(){
+            try {
+                closeSocket();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
 
+
+        public void closeSocket() throws IOException {
+            dOut.close();
+            dIn.close();
+            socket.close();
         }
     }
 }

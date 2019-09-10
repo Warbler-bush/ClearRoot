@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -14,24 +13,28 @@ import java.util.Random;
 import static java.util.Collections.synchronizedList;
 
 public class NetworkManger {
+
+    private final static String TrackerFile = "srepe.lst";
+
     private ArrayList<String> trackers = null;
     private int idxMyTracker;
     private Courier courier;
+    private ArrayList<Safezone> safezones;
 
 
     /* JOINING THE SWARN and if it's a tracker, starts the Thread of Tracker*/
     /*Searching a tracker to join its swarn*/
     public NetworkManger(boolean isTracker) throws IOException {
         try {
-            if(isTracker)
-                new Tracker().start();
+            if(isTracker);
+               new Thread(new Tracker()).start();
         } catch (Exception e) {
             e.printStackTrace();
         }
 
         courier = new Courier();
 
-        trackers = loadTrackers();
+        loadSREPE();
         System.out.println("Trackers:");
         System.out.println(trackers.toString());
 
@@ -48,17 +51,39 @@ public class NetworkManger {
     private int newTracker(){
         return new Random().nextInt()%trackers.size();
     }
+
     /* Opens the "srepe.txt" file and read the trackers on the list*/
-    private ArrayList<String> loadTrackers() {
-        ArrayList<String> ret = new ArrayList<>() ;
+    private void loadSREPE() {
+        trackers = new ArrayList<>();
+        safezones = new ArrayList<>();
 
         try {
             BufferedReader br = new BufferedReader(
-                    new  FileReader(this.getClass().getResource("srepe.lst").getFile()) );
+                    new  FileReader(this.getClass().getResource(TrackerFile).getFile()) );
 
-            int cnt_trackers = Integer.parseInt(br.readLine());
-            for(int i = 0; i< cnt_trackers; i++)
-                ret.add(br.readLine());
+            String line = "";
+            char token = ' ';
+            while( (line = br.readLine()) != null) {
+                if(line.isBlank() || line.isEmpty())
+                    continue;
+
+                if(line.equals( "/trackers") ) {
+                    token = 'T';
+                    continue;
+                }
+
+                if(line.equals("/safezones") ) {
+                    token = 'S';
+                    continue;
+                }
+
+                if(token == 'T')
+                    trackers.add(line);
+
+                if(token == 'S')
+                    safezones.add(new Safezone(Integer.parseInt(line)));
+
+            }
 
             br.close();
         } catch (FileNotFoundException e) {
@@ -67,10 +92,12 @@ public class NetworkManger {
             e.printStackTrace();
         }
 
-        return ret;
     }
 
-    public static class Tracker  {
+
+    /* Tracker is a part of NetworkManger and only some of the peers are trackers, for now
+    * the tracker only registers the peers in the swarn and nothing else.*/
+    public static class Tracker implements Runnable{
 
         private ServerSocket serverSocket;
         private List<String> swarn;
@@ -80,7 +107,8 @@ public class NetworkManger {
         public void start( ) throws IOException {
 
             /*backlog is the same argument of listen() in the berkley socket*/
-            serverSocket =  new ServerSocket(PORT,50, InetAddress.getByName("0.0.0.0"));;
+            serverSocket =  new ServerSocket(PORT);;
+            System.out.println(" my ip and port are:"+ serverSocket.getLocalSocketAddress().toString());
             while (true)
                 new  ClientHandler(serverSocket.accept(),this).start();
         }
@@ -93,7 +121,16 @@ public class NetworkManger {
             serverSocket.close();
         }
 
+        @Override
+        public void run() {
+            try {
+                start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
 
+        /* Adds the peer to the swarn  and gives the permission to enter the peer to peer network*/
         private static class ClientHandler extends Thread{
 
             private TrackerCourier courier;
@@ -108,9 +145,10 @@ public class NetworkManger {
             public void run(){
                 try {
                     String peer = courier.accept_swarn_join();
-                    if(peer != null)
+                    if(peer != null) {
                         tracker.swarn.add(peer);
-
+                        System.out.println("peer " +peer +" has joined the swarn");
+                    }
 
                 } catch (IOException e) {
                     e.printStackTrace();
