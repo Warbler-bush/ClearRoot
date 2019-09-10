@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+//SIMO GAY
 import static java.util.Collections.synchronizedList;
 
 public class NetworkManger {
