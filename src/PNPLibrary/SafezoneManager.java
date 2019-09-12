@@ -1,20 +1,25 @@
 package PNPLibrary;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.logging.SimpleFormatter;
 
 public class SafezoneManager {
     private ArrayList<Safezone> safezones;
-    private static final String SAFEZONE_FOLDER_PATH = "safezones\\";
+    public static final String SAFEZONES_FOLDER_PATH = "safezones\\";
+    private static SafezoneManager manager = null;
 
-    public SafezoneManager(){
+    public static SafezoneManager Manager(){
+        if(manager == null)
+            manager = new SafezoneManager();
+
+        return manager;
+    }
+
+    private SafezoneManager(){
         safezones = new ArrayList<>();
     }
 
@@ -22,36 +27,63 @@ public class SafezoneManager {
         safezones.add(safezone);
     }
 
-    public void init_safezones() throws FileNotFoundException {
+    public Safezone getSafezoneById(int id){
+        for(int i = 0; i < safezones.size(); i++)
+            if(safezones.get(i).getID() == id)
+                return safezones.get(i);
+        return null;
+    }
 
+    public void init_safezones() {
+        /* loading the basic data from the safezones */
+        load_safezones();
+        load_log_files();
+    }
+    private void load_safezones(){
         for(int i = 0; i< safezones.size(); i++){
             Safezone safezone = safezones.get(i);
 
-            String info_file_path = SAFEZONE_FOLDER_PATH+safezones.get(i).getID()+"\\"+safezone.getID()+".sz";
+            String info_file_path = SAFEZONES_FOLDER_PATH+safezones.get(i).getID()+"\\"+safezone.getID()+".sz";
             try (BufferedReader br = new BufferedReader(new FileReader(info_file_path ) )){
-                  safezone.isIDEqual( Integer.parseInt(br.readLine()) );
-                  safezone.setPassword(br.readLine().toCharArray());
-                  safezone.setSync_time(Integer.parseInt( br.readLine()));
 
-                  int n_keepers = Integer.parseInt( br.readLine());
-                  for(int k = 0; k< n_keepers; k++)
-                      safezone.addKeepers(br.readLine());
+                safezone.isIDEqual( Integer.parseInt(br.readLine() ) );
+
+                safezone.setPassword(br.readLine());
+                safezone.setSync_time(Integer.parseInt( br.readLine()));
 
 
-                  int n_resources = Integer.parseInt(br.readLine());
-                  for(int k = 0; k< n_resources; k++){
-                      String[] fields = br.readLine().split(" ");
-                      safezone.addResource( Resource.importResource( fields[0], new SimpleDateFormat("dd/MM/yyyy/HH:mm:ss").parse(fields[1]),
-                                            fields[2] , Integer.parseInt(fields[3])  ));
-                  }
+                /* SETTING THE KEEPERS*/
+                int n_keepers = Integer.parseInt( br.readLine());
+                String keeper = null;
+                for(int k = 0; k< n_keepers; k++) {
+                    keeper = br.readLine();
+                    if(!keeper.equals(NetworkManger.getMyIP()))
+                        safezone.addKeepers(keeper);
+                }
 
-            }catch (IOException e){
+                int n_resources = Integer.parseInt(br.readLine());
+                for(int k = 0; k< n_resources; k++){
+                    String[] fields = br.readLine().split(" ");
+                    safezone.addResource( Resource.importResource( fields[0],
+                            fields[1] , Integer.parseInt(fields[2])  ));
+                }
 
-            } catch (ParseException e) {
+            }catch (IOException e) {
                 e.printStackTrace();
             }
-
-
         }
+    }
+
+    private void load_log_files() {
+        /*the earliest command is at the top*/
+        for (int i = 0; i < safezones.size(); i++)
+            safezones.get(i).check_if_resources_were_localy_modified();
+
+    }
+
+    public void syn() throws IOException {
+        for(int i = 0; i< safezones.size(); i++)
+            safezones.get(i).syn();
+
     }
 }
