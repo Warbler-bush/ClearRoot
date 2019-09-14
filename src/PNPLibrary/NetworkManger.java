@@ -48,9 +48,11 @@ public class NetworkManger {
             try {
                 manager = new NetworkManger(isTracker, myIP);
             }catch (IOException e){
+                e.printStackTrace();
                 System.out.println("[NETWORK MANAGER] Error init");
             }
         }
+
         return manager;
     }
 
@@ -94,6 +96,8 @@ public class NetworkManger {
         /*JOINING THE SWARN */
         courier = new Courier();
         courier.join_swarn(getMyTracker());
+
+
         /*LOADING THE SAFEZONES INFORMATION*/
         safezoneManager.init_safezones();
         /* SYNCHRONIZE THE FILES OF SAFEZONES WITH OTHER PEERS */

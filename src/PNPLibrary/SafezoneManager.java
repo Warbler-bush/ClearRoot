@@ -9,7 +9,7 @@ import java.util.ArrayList;
 
 public class SafezoneManager {
     private ArrayList<Safezone> safezones;
-    public static final String SAFEZONES_FOLDER_PATH = "safezones\\";
+    public static String SAFEZONES_FOLDER_PATH = "safezones\\";
     private static SafezoneManager manager = null;
 
     public static SafezoneManager Manager(){
@@ -77,7 +77,7 @@ public class SafezoneManager {
     private void load_log_files() {
         /*the earliest command is at the top*/
         for (int i = 0; i < safezones.size(); i++)
-            safezones.get(i).check_if_resources_were_localy_modified();
+            safezones.get(i).load_local_log_file();
 
     }
 

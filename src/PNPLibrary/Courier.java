@@ -40,7 +40,7 @@ class Courier {
 
     public byte[] file_request(int safezone_id,String pass,String filename) throws IOException {
 
-        System.out.println("[COURIER] SENDING FRQ...");
+        System.out.println("[COURIER] SENDING FRQ "+ filename+" ...");
         client.send(PSPacket.FRQ_MSG_C(safezone_id, pass ,filename).toBinary() );
         PSPacket packet  = PSPacket.toPacket( client.receive() );
 
@@ -53,11 +53,16 @@ class Courier {
     }
 
     public void report_file_update(int safezone_id, String pass, String filename) throws IOException {
+        System.out.println("[COURIER] SENDING FILE UPDATE "+filename+" ...");
         byte[] file_data = file_to_binary(filename);
         client.send(PSPacket.RFU_MSG_C(safezone_id, pass, filename,file_data).toBinary());
         PSPacket packet = PSPacket.toPacket(client.receive());
         if(!packet.isTypeEqual(PSPacket.OK))
             throw new IOException();
+    }
+
+    public void file_answer(int safezone_id, String pass, String filename, byte[] data) throws IOException{
+        client.send(PSPacket.FAW_MSG_C(safezone_id, pass, filename, data).toBinary() );
     }
 
     private byte[] file_to_binary(String file_path) throws IOException {
@@ -66,6 +71,8 @@ class Courier {
         in.close();
         return data;
     }
+
+
 
 
     public void disconnect() throws IOException {
@@ -116,13 +123,17 @@ class Courier {
 
 
             if (packet.isTypeEqual(PSPacket.FRQ)) {
-                System.out.println("[COURIER S.] FILE REQUEST");
-                client.send(PSPacket.FAW_MSG_C(packet.getSafezone_id(), new String(packet.getPassword()),
-                        packet.getFilename(), file_to_binary(packet.getFilename())).toBinary());
+                System.out.println("[COURIER S.] FILE REQUEST "+packet.getFilename());
+
+                String path = SafezoneManager.SAFEZONES_FOLDER_PATH+"\\"+packet.getSafezone_id();
+
+                file_answer( packet.getSafezone_id(), new String(packet.getPassword()) , packet.getFilename(),
+                        file_to_binary(path+"\\"+packet.getFilename()  ));
+
             }
 
             if (packet.isTypeEqual(PSPacket.RFU)) {
-                System.out.print("[COURIER S.] FILE UPDATE");
+                System.out.print("[COURIER S.] FILE UPDATE "+packet.getFilename());
                 Safezone safezone = SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id());
                 safezone.overwrite_file(packet.getFilename(), packet.getData());
                 client.send(PSPacket.OK_MSG_C().toBinary());
