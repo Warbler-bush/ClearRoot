@@ -1,13 +1,13 @@
 package PNPLibrary;
 
 import javax.sound.midi.Track;
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -16,33 +16,68 @@ import static java.util.Collections.synchronizedList;
 
 public class NetworkManger {
 
-    private final static String TrackerFile = "srepe.lst";
+    /*-----------------------------------*/
+    /*GENERAL UTILITY CONSTANTS          */
+    /*-----------------------------------*/
 
-    private ArrayList<String> trackers = null;
-    private int idxMyTracker;
+    private final static String TrackerFile = "Resources\\srepe.lst";
+    public static String SafezonesFile = "safezones.lst";
+    public final static String LOCALHOST = "127.0.0.1";
+    public final static String HOST = "0.0.0.0";
+    private static String myIP = null;
+
+
+    /*connection test*/
+    private static final String DNS_HOST = "8.8.8.8";
+    private static final int DNS_PORT = 53;
+
+    /*connection test in localhost*/
+    private static final String GOD_TRACKER_IP = "127.0.0.2";
+    private static final int GOD_TRACKER_PORT = Tracker.PORT;
+
+    private static  boolean LO = false;
+    /*------------------------------------------------*/
+    /*COMMUNICATION ATTRIBUTES                        */
+    /*------------------------------------------------*/
     private Courier courier;
-    private SafezoneManager safezoneManager = null;
     private ServerSocket_n server;
 
+    /*------------------------------------------------*/
+    /*     TRACKER  ATTRIBUTES                        */
+    /*------------------------------------------------*/
 
-
-    private static String myIP = null;
+    /*list of trackers*/
+    private ArrayList<String> trackers = null;
     private static boolean isTracker = false;
+    private int idxMyTracker;
+
+    /*tracker server*/
+    private Tracker tracker = null;
+
+    /*SAFEZONE MANAGER*/
+    private SafezoneManager safezoneManager = null;
+
+    /*NENTWORK MANAGER*/
     private static NetworkManger manager = null;
 
-    public static String getMyIP(){
-        return NetworkManger.myIP;
-    }
 
-    public static Boolean isTracker(){
-        return isTracker;
+
+    /*----------------------------------*/
+    /*NETWORK METHODS                   */
+    /*----------------------------------*/
+
+    /*sets the "ip" and the flag "is Tracker" */
+    public static void init(boolean isTracker,String ip,boolean isLO){
+        NetworkManger.isTracker = isTracker;
+        NetworkManger.myIP = ip;
+        NetworkManger.LO = isLO;
     }
 
     public static void init(boolean isTracker,String ip){
-        NetworkManger.isTracker = isTracker;
-        NetworkManger.myIP = ip;
+        init(isTracker,ip,false);
     }
 
+    /*before calling the manager the client of this library should first call init() */
     public static NetworkManger manager(){
         if(manager == null) {
             try {
@@ -56,19 +91,22 @@ public class NetworkManger {
         return manager;
     }
 
-
-
     /* JOINING THE SWARN and if it's a tracker, starts the Thread of Tracker*/
     /*Searching a tracker to join its swarn*/
     /*the ip attribute is used for debugging*/
     private NetworkManger(boolean isTracker,String ip) throws IOException {
 
+        safezoneManager = SafezoneManager.Manager();
+
         System.out.print("[NETWORK MANAGER] starting the tracker...");
         /* START THE TRACKER THREAD*/
         try {
-            if(isTracker);
-               new Thread(new Tracker(ip)).start();
+            if(isTracker) {
+                tracker = new  Tracker(ip);
+                new Thread(tracker,"TRACKER").start();
+            }
         } catch (Exception e) {
+            System.out.println("ERROR STARTING THE TRACKER");
             e.printStackTrace();
         }
         System.out.println("DONE");
@@ -80,13 +118,16 @@ public class NetworkManger {
         server.start();
         System.out.println("DONE");
 
+
+
+
         /*GETTING THE TRACKER AND LOADING THE ID OF THE SAFEZONES*/
 
 
         System.out.print("[NETWORK MANAGER]loading the srepe...");
         loadSREPE();
         System.out.println("DONE");
-
+        
         System.out.println("[NETWORK MANGER] Trackers:"+trackers.toString());
 
 
@@ -94,8 +135,17 @@ public class NetworkManger {
         System.out.println("[NETWORK MANAGER]myTracker:"+getMyTracker());
 
         /*JOINING THE SWARN */
-        courier = new Courier();
+        courier = CourierManager.Manager().createCourier();
         courier.join_swarn(getMyTracker());
+        courier.stopRunning();
+
+        System.out.print("[NETWORK MANAGER]loading the safezones...");
+        loadSAFEZONES();
+        System.out.println("DONE");
+
+        System.out.println("[NETWORK MANGER] Safezones:"+safezoneManager.toString());
+
+
 
 
         /*LOADING THE SAFEZONES INFORMATION*/
@@ -106,26 +156,25 @@ public class NetworkManger {
 
     }
 
-    public NetworkManger(boolean isTracker) throws  IOException{
-        this(isTracker,"0.0.0.0");
-    }
-
-
-
-
-    private String getMyTracker(){ return trackers.get(idxMyTracker);}
-    /* Choose randomly a tracker from the list*/
-    private int newTracker(){
-        return new Random().nextInt()%trackers.size();
-    }
-    /* Opens the "srepe.txt" file and read the trackers on the list*/
-    private void loadSREPE() {
-        trackers = new ArrayList<>();
+    private void loadSAFEZONES() {
         safezoneManager = SafezoneManager.Manager();
+
+        File file = new File(SafezonesFile);
+        if(!file.exists()) {
+            try {
+                file.createNewFile();
+                BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+                bw.write("/safezones");
+                bw.close();
+            } catch (IOException e) {
+                System.out.println("[NETWORK MANAGER] CREATION SAFEZONE LIST FAILED" );
+                e.printStackTrace();
+            }
+        }
 
         try {
             BufferedReader br = new BufferedReader(
-                    new  FileReader(this.getClass().getResource(TrackerFile).getFile()) );
+                    new  FileReader(SafezonesFile) );
 
             String line = "";
             char token = ' ';
@@ -148,8 +197,52 @@ public class NetworkManger {
                     if(!line.equals(InetAddress.getLocalHost().getHostAddress()))
                         trackers.add(line);
 
+
+                // the safezone password will be updated later in the reading of safezone_id.sz
                 if(token == 'S')
-                    safezoneManager.add(new Safezone(Integer.parseInt(line)));
+                    safezoneManager.add(new Safezone(Integer.parseInt(line),""));
+
+            }
+
+            br.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /* Opens the "srepe.txt" file and read the trackers on the list*/
+    private synchronized void loadSREPE() {
+        trackers = new ArrayList<>();
+
+        try {
+            BufferedReader br = new BufferedReader(
+                    new  FileReader( TrackerFile) );
+
+            String line = "";
+            char token = ' ';
+
+            while( (line = br.readLine()) != null) {
+                if(line.isBlank() || line.isEmpty())
+                    continue;
+
+                if(line.equals( "/trackers") ) {
+                    token = 'T';
+                    continue;
+                }
+
+                if(line.equals("/safezones") ) {
+                    token = 'S';
+                    continue;
+                }
+
+                if(token == 'T')
+                    if(!line.equals(InetAddress.getLocalHost().getHostAddress()))
+                        trackers.add(line);
+
+
+                // the safezone password will be updated later in the reading of safezone_id.sz
+                if(token == 'S')
+                    safezoneManager.add(new Safezone(Integer.parseInt(line),""));
 
             }
 
@@ -162,79 +255,123 @@ public class NetworkManger {
 
     }
 
-}
-
-/*------------------------------------------------------------------------------------*/
-/* Tracker is a part of NetworkManger and only some of the peers are trackers, for now
- * the tracker only registers the peers in the swarn and nothing else.*/
-/*------------------------------------------------------------------------------------*/
-class Tracker implements Runnable{
-
-    private ServerSocket serverSocket;
-    private List<String> swarn;
-    private String ip;
-    public static int PORT = 10121;
-
-    public void start() throws IOException {
-        /*backlog is the same argument of listen() in the berkley socket*/
-        serverSocket =  new ServerSocket(PORT,50, InetAddress.getByName(ip));;
-        while (true)
-            new  ClientHandler(serverSocket.accept(),this).start();
+    /*It's used when you don't want a localhost PEER*/
+    public NetworkManger(boolean isTracker) throws  IOException{
+        this(isTracker,HOST);
     }
 
+    /*stops all the SERVERS*/
+    public void shut_down(){
 
-
-    public Tracker(String ip) {
-        this.ip = ip;
-        swarn = synchronizedList(new ArrayList<>()) ;
-        System.out.println("[TRACKER] my ip and port are:"+ ip +":"+ Tracker.PORT);
-    }
-
-    public void stop() throws Exception {
-        serverSocket.close();
-    }
-
-    @Override
-    public void run() {
         try {
-            start();
+            /*still need to fix*/
+            Courier courier = CourierManager.Manager().createCourier();
+            courier.exit_swarn(getMyTracker());
+
+            CourierManager.Manager().disconnenct_all();
+            server.stopRunning();
+            tracker.stop();
+        } catch (Exception e) {
+            System.out.println("[NETWORK MANAGER] TRACKER SUCCESSFULLY STOPPED");
+            e.printStackTrace();
+        }
+
+        Tracker.STOP_TRACKER = true;
+        ServerSocket_n.STOP_SERVER = true;
+    }
+
+    /*returns the ip of this host*/
+    public static String getMyIP(){
+        return NetworkManger.myIP;
+    }
+
+    /*check if a peer is online*/
+    public static boolean isOnlinePeer(String peer_ip){
+        Courier courier = CourierManager.Manager().createCourier();
+        boolean isOnline = false;
+        try{
+            courier.connect(peer_ip);
+            courier.disconnect();
+            isOnline = true;
+        }catch (IOException e) {
+            System.out.println("[SAFEZONE] "+ peer_ip +" is unreachable");
+        }
+        return isOnline;
+    }
+
+    /*checks if the host has Internet, NOT TEST FOR LOOPBACK*/
+    private boolean hasConnection(String ip,int port){
+        Courier courier = CourierManager.Manager().createCourier();
+        boolean ret = false;
+        try {
+            courier.connect(ip,port);
+            courier.disconnect();
+            ret = true;
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return ret;
+    }
+
+    public boolean hasConnection(){
+        if(isLO())
+            return hasConnection(GOD_TRACKER_IP,GOD_TRACKER_PORT);
+        else return hasConnection(DNS_HOST,DNS_PORT);
     }
 
 
 
-    /*------------------------------------------------------------------------------------*/
-    /* HANDLER OF THE REQUESTS */
-    /*------------------------------------------------------------------------------------*/
-    /* Adds the peer to the swarn  and gives the permission to enter the peer to peer network*/
-    private static class ClientHandler extends Thread{
+    /*----------------------------------*/
+    /*TRACKER METHODS                   */
+    /*----------------------------------*/
 
-        private TrackerCourier courier;
-        private Tracker tracker;
+    /*get the tracker that's bind with this host*/
+    private String getMyTracker(){ return trackers.get(idxMyTracker);}
 
-        public ClientHandler(Socket socket, Tracker tracker) throws IOException {
-            this.courier = new TrackerCourier(socket);
-            this.tracker = tracker;
-        }
+    /* Choose randomly a tracker from the list*/
+    private int newTracker(){
+        return new Random().nextInt()%trackers.size();
+    }
 
-        /* When the peer receive a request*/
-        public void run(){
-            try {
-                String peer = courier.accept_swarn_join();
-                if(peer != null) {
-                    tracker.swarn.add(peer);
-                    System.out.println("[TRACCKER] "+peer +" has joined the swarn");
-                }
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-        }
+    /*checks if this peer is also a tracker*/
+    public static Boolean isTracker(){
+        return isTracker;
     }
 
 
+    /*--------------------------------------------*/
+    /*SAFEZONE MANAGERS METHODS                   */
+    /*--------------------------------------------*/
 
+    /*the creation of safezone misses the check for unique safezone_id*/
+    public Safezone create_safezone(int safezone_id, String password, int sync_time)   {
+        try {
+            return safezoneManager.create_safezone(safezone_id,password,sync_time);
+        } catch (IOException e) {
+            System.out.println("[NETWORK MANAGER] Safezone creation failed");
+        }
+        return null;
+    }
+
+    public Safezone create_safezone(int safezone_id, String password) {
+        return create_safezone(safezone_id,password,1);
+    }
+
+    public Safezone join_safezone(int safezone_id , String password ,String peer_id) throws IOException {
+        return safezoneManager.join_safezone(safezone_id,password,peer_id);
+    }
+
+    public static void setSafezoneManagerFolderPathRoot(String root){
+        SafezoneManager.SAFEZONES_FOLDER_PATH = root +"\\"+SafezoneManager.SAFEZONES_FOLDER_PATH;
+    }
+
+    public static void setSafezonesListPathRoot(String root){
+        SafezonesFile = root+"\\"+SafezonesFile;
+    }
+
+    public boolean isLO() {
+        return LO;
+    }
 }
+
+

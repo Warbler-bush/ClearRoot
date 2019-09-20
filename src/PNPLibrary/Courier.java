@@ -1,11 +1,15 @@
 package PNPLibrary;
 
-import java.io.*;
-import java.net.InetAddress;
-import java.net.ServerSocket;
+import javafx.util.Pair;
+
+import javax.swing.plaf.IconUIResource;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 
 /*------------------------------------------------------------------------------------*/
 /* COURIER                                                                           */
@@ -36,6 +40,10 @@ class Courier {
         if(!packet.isTypeEqual(PSPacket.RQA))
             throw new IOException();
         System.out.println("[COURIER] RQA ARRIVED");
+    }
+
+    public void connect(String ip) throws  IOException{
+        connect(ip,Courier.PORT);
     }
 
     public byte[] file_request(int safezone_id,String pass,String filename) throws IOException {
@@ -72,8 +80,95 @@ class Courier {
         return data;
     }
 
+    public void listen_message() throws IOException {
+
+        System.out.println("[COURIER S.] CON REQUEST");
+        PSPacket packet = PSPacket.toPacket( client.receive());
+        client.send(PSPacket.RQA_MSG_C().toBinary());
+
+        while(!ServerSocket_n.STOP_SERVER) {
+            packet = PSPacket.toPacket(client.receive());
+
+            if(packet.isTypeEqual(PSPacket.FIN)){
+                System.out.println("[COURIER S.] DISCONNECT");
+                client.disconnect();
+                return;
+            }
+
+            if (packet.isTypeEqual(PSPacket.FRQ)) {
+                System.out.println("[COURIER S.] FILE REQUEST "+packet.getFilename());
+
+                String path = SafezoneManager.SAFEZONES_FOLDER_PATH+"\\"+packet.getSafezone_id();
+
+                try{
+                file_answer( packet.getSafezone_id(), new String(packet.getPassword()) , packet.getFilename(),
+                        file_to_binary(path+"\\"+packet.getFilename()  ));
+                }catch (FileNotFoundException e){
+                    System.out.println("[COURIER S.] safezone "+packet.getSafezone_id()+" hasn't a log file yet");
+
+                }
+            }
+
+            if (packet.isTypeEqual(PSPacket.RFU)) {
+                System.out.print("[COURIER S.] FILE UPDATE "+packet.getFilename());
+                Safezone safezone = SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id());
+                safezone.overwrite_file(safezone.getFolderPath()+"\\"+packet.getFilename(), packet.getData());
+                client.send(PSPacket.OK_MSG_C().toBinary());
+            }
+
+            if(packet.isTypeEqual(PSPacket.SZJ)){
+                System.out.println("[COURIER S.] REQUEST SAFEZONE JOIN");
+                System.out.println("[COURIER S.] "+client.getHostAddress()+" has joined the safezone");
+                Safezone safezone = SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id());
+                accept_safezone_join(safezone.getID(),safezone.getPassword(),safezone.get_info_file());
+            }
+
+            if(packet.isTypeEqual(PSPacket.SZE)){
+                System.out.printf("[COURIER S.] REQUEST SAFEZONE EXIT");
+                SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id()).removeKeeper(client.getHostAddress());
+                client.send(PSPacket.OK_MSG_C().toBinary());
+            }
+
+        }
 
 
+    }
+
+
+    /*STill uncomplete, all keepers need to be online for receive all the OK.*/
+    public void leave_safezone(int safezone_id, String password) throws IOException {
+        client.send(PSPacket.SZE_MSG_C(safezone_id,password).toBinary());
+        PSPacket packet = PSPacket.toPacket(client.receive());
+
+        if (!packet.isTypeEqual(PSPacket.OK))
+            throw new IOException("[Courier] Exit from safezone unsuccessfull");
+
+    }
+
+    public byte[] safezone_join(int safezone_id, String pass) throws IOException {
+        client.send(PSPacket.SZJ_MSG_C(safezone_id,pass ).toBinary());
+        PSPacket packet = PSPacket.toPacket(client.receive()) ;
+        if(!packet.isTypeEqual(PSPacket.RQA))
+            throw new IOException("Request denied");
+
+        packet= PSPacket.toPacket(client.receive()) ;
+        if(!packet.isTypeEqual(PSPacket.FAW))
+            throw new IOException("Keeper didn't send the info file");
+
+        return packet.getData();
+    }
+
+    public void accept_safezone_join(int safezone_id, String pass,byte[] safezone_file) throws IOException {
+        client.send(PSPacket.RQA_MSG_C().toBinary());
+
+        PSPacket packet1 = PSPacket.FAW_MSG_C(safezone_id,pass,"info_file",safezone_file);
+        client.send(packet1.toBinary());
+    }
+
+
+    public String getHostIp(){
+        return client.getHostIp();
+    }
 
     public void disconnect() throws IOException {
         System.out.println("[COURIER] SEND FIN");
@@ -89,6 +184,7 @@ class Courier {
 
         client.connect(ip_peer, Tracker.PORT);
         client.send(PSPacket.SWJ_MSG_C().toBinary());
+
         PSPacket packet = PSPacket.toPacket( client.receive() );
 
         if(!packet.isTypeEqual(PSPacket.RQA))
@@ -99,49 +195,24 @@ class Courier {
 
     }
 
-
     public void exit_swarn(String ip_peer) throws Exception {
         client.connect(ip_peer,Tracker.PORT);
         client.send(PSPacket.SWE_MSG_C().toBinary());
+
+        PSPacket packet = PSPacket.toPacket( client.receive() );
+        if(!packet.isTypeEqual(PSPacket.RQA))
+            throw new IOException();
+
         client.disconnect();
+        System.out.println("[COURIER]Exited to the swarn");
     }
 
-    public void listen_message() throws IOException {
 
-        System.out.println("[COURIER S.] CON REQUEST");
-        PSPacket packet = PSPacket.toPacket( client.receive());
-        client.send(PSPacket.RQA_MSG_C().toBinary());
-
-        while(true) {
-            packet = PSPacket.toPacket(client.receive());
-
-            if(packet.isTypeEqual(PSPacket.FIN)){
-                System.out.println("[COURIER S.] DISCONNECT");
-                client.disconnect();
-                return;
-            }
-
-
-            if (packet.isTypeEqual(PSPacket.FRQ)) {
-                System.out.println("[COURIER S.] FILE REQUEST "+packet.getFilename());
-
-                String path = SafezoneManager.SAFEZONES_FOLDER_PATH+"\\"+packet.getSafezone_id();
-
-                file_answer( packet.getSafezone_id(), new String(packet.getPassword()) , packet.getFilename(),
-                        file_to_binary(path+"\\"+packet.getFilename()  ));
-
-            }
-
-            if (packet.isTypeEqual(PSPacket.RFU)) {
-                System.out.print("[COURIER S.] FILE UPDATE "+packet.getFilename());
-                Safezone safezone = SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id());
-                safezone.overwrite_file(packet.getFilename(), packet.getData());
-                client.send(PSPacket.OK_MSG_C().toBinary());
-            }
-        }
-
-
+    public void stopRunning() throws IOException {
+        client.shut_down();
     }
+
+
 
     protected static class  PSPacket {
 
@@ -351,7 +422,7 @@ class Courier {
         }
 
         private PSPacket setData(byte[] data){
-            if( data != null && data.length >= 0)
+            if(data != null)
                 this.data = data;
             else return null;
 
@@ -633,12 +704,30 @@ class TrackerCourier extends Courier{
         this.client = new ClientSocket_n(client);
     }
 
-    /* return false if it's all ok*/
-    public String accept_swarn_join() throws IOException {
+
+    public Pair<String,String> listen() throws IOException{
         PSPacket packet = PSPacket.toPacket(client.receive());
+
         if(packet.isTypeEqual(PSPacket.SWJ) ) {
             client.send(PSPacket.RQA_MSG_C().toBinary());
-            return client.getHostAddress();
+            return new Pair<>(new String(PSPacket.SWJ), client.getHostAddress());
+        }
+
+        if(packet.isTypeEqual(PSPacket.SWE)){
+            client.send(PSPacket.RQA_MSG_C().toBinary());
+            return new Pair<>(new String(PSPacket.SWE), client.getHostAddress());
+        }
+
+        if(packet.isTypeEqual(PSPacket.CON)){
+            System.out.println("[COURIER S.] CONNECTED");
+            client.send(PSPacket.RQA_MSG_C().toBinary());
+            return new Pair<>(new String(PSPacket.CON),client.getHostAddress());
+        }
+
+        if(packet.isTypeEqual(PSPacket.FIN)){
+            System.out.println("[COURIER S.] DISCONNECT");
+            client.disconnect();
+            return new Pair<>(new String(PSPacket.FIN),client.getHostAddress());
         }
 
         // not sending request decline because it's a error of sender, it's not even a request.
@@ -648,137 +737,5 @@ class TrackerCourier extends Courier{
 
 }
 
-/*------------------------------------------------------------------------------------*/
-/* simple client and server socket                                                    */
-/*------------------------------------------------------------------------------------*/
 
-
-class ClientSocket_n  {
-
-    private Socket socket ;
-    private DataOutputStream dOut ;
-    private DataInputStream dIn;
-
-    public ClientSocket_n(Socket sock) throws IOException {
-        this.socket = sock;
-        dOut = new DataOutputStream(socket.getOutputStream());
-        dIn = new DataInputStream(socket.getInputStream());
-    }
-
-    public ClientSocket_n(){ }
-
-    public void connect(String ip, int port) throws IOException{
-        socket = new Socket(ip, port);
-        dOut = new DataOutputStream(socket.getOutputStream());
-        dIn = new DataInputStream(socket.getInputStream());
-    }
-
-    public void send(byte[] msg) throws IOException {
-        dOut.writeInt(msg.length); // write length of the message
-        dOut.write(msg);           // write the message
-    }
-
-    public byte[] receive() throws IOException {
-
-        int length = dIn.readInt();                    // read length of incoming message
-        if(length > 0) {
-            byte[] message = new byte[length];
-            dIn.readFully(message, 0, message.length); // read the message
-            return message;
-        }
-        return null;
-    }
-
-    public void disconnect() throws IOException {
-        dOut.close();
-        dIn.close();
-        socket.close();
-    }
-
-    public void sendFile(String file_path) throws IOException {
-        FileInputStream in = new FileInputStream(file_path);
-        int count;
-        byte[] buffer = new byte[8192]; // or 4096, or more
-        while ((count = in.read(buffer)) > 0)
-        {
-            dOut.write(buffer, 0, count);
-        }
-        in.close();
-    }
-    /* return the host address*/
-    public String getHostAddress(){
-        return socket.getRemoteSocketAddress().toString();
-    }
-
-}
-
-class ServerSocket_n extends Thread {
-    private ServerSocket serverSocket;
-    private String ip;
-    private int port;
-
-    public ServerSocket_n(String ip,int port){
-        this.ip = ip;
-        this.port = port;
-    }
-
-    public ServerSocket_n(boolean isLocalhost){
-        if(isLocalhost)
-            ip = "127.0.0.1";
-        else ip = "0.0.0.0";
-
-        port = Courier.PORT;
-    }
-
-    public ServerSocket_n(){
-        /*this!!!!!!!! -> recalls the constructor with these parameters*/
-        this(false);
-    }
-
-
-
-    public void startServer() throws IOException {
-
-        /* https://stackoverflow.com/questions/14976867/how-can-i-bind-serversocket-to-specific-ip */
-        /*backlog is the same argument of listen() in the berkley socket*/
-        serverSocket =  new ServerSocket(port,50,InetAddress.getByName(ip) );
-
-        while (true)
-            new ClientHandler(serverSocket.accept()).start();
-
-    }
-
-    public void stopRunning() throws Exception {
-        serverSocket.close();
-    }
-
-    @Override
-    public void run(){
-        try {
-            startServer();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-
-    private static class ClientHandler extends Thread{
-        private Courier courier = null;
-
-        public ClientHandler(Socket socket) throws IOException {
-            courier = new Courier(socket);
-        }
-
-        /* When the peer receive a request*/
-        public void run(){
-            try {
-                courier.listen_message();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-
-    }
-}
 
