@@ -33,7 +33,7 @@ class SafezoneManager {
             return null;
         }
 
-
+        System.out.print("[SAFEZONE MANAGER] CREATING SAFEZONE "+safezone_id+" ...");
         Safezone sz = new Safezone(safezone_id,password,sync_time);
         safezones.add(sz);
         try {
@@ -42,13 +42,16 @@ class SafezoneManager {
             System.out.println("[SAFEZONE MANAGER] update safezone list failed");
             throw new IOException();
         }
+
         try {
             create_safezone_file(sz);
         } catch (IOException e) {
             System.out.println("[SAFEZONE MANAGER] creation of safezone file failed");
             throw new IOException();
         }
+
         create_safezone_log_file(sz);
+        System.out.println("DONE");
         return sz;
     }
 
@@ -71,6 +74,7 @@ class SafezoneManager {
 
     public void create_safezone_file(Safezone safezone) throws IOException {
 
+
         /*Creating the file and directory*/
         File file = new File( safezone.getFolderPath()+"\\"+safezone.getID()+".sz");
 
@@ -83,6 +87,7 @@ class SafezoneManager {
         file.createNewFile();
 
         safezone.update_safezone_file();
+
     }
 
     public boolean hasSafezone(int safezone_id){
@@ -101,16 +106,18 @@ class SafezoneManager {
 
 
         Courier courier = CourierManager.Manager().createCourier();
+        Safezone safezone  = new Safezone(safezone_id,password);
+        safezones.add(safezone);
 
         courier.connect(peer_id);
-        byte[] safezone_log_file = courier.safezone_join(safezone_id,password);
+        byte[] safezone_info_file = courier.safezone_join(safezone_id,password);
         courier.disconnect();
 
-        Safezone safezone  = new Safezone(safezone_id,password);
-        safezone.load_info_file(safezone_log_file);
+
+        safezone.load_info_file(safezone_info_file);
         System.out.println("[SAFEZONE MANAGER] safezone "+safezone.getID()+" joined succefully the safezone");
 
-        safezones.add(safezone);
+
         create_safezone_file(safezone);
         create_safezone_log_file(safezone);
         update_safezone_list(safezone);

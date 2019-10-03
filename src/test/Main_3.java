@@ -3,13 +3,10 @@ package test;
 import PNPLibrary.NetworkManger;
 import PNPLibrary.Safezone;
 
-import java.io.IOException;
-import java.util.Scanner;
-
 public class Main_3 {
 
     public static void main(String[] args) {
-
+        final String test_resource_path = "D:\\TDDOWNLOAD\\projects\\ClearSystem\\ClearRoot\\Resources\\arctic_monkey_arabella.mp3";
 
         String ip = "";
 
@@ -42,7 +39,7 @@ public class Main_3 {
 
         sz = NetworkManger.manager().create_safezone(safezone_id,password);
         if(sz != null)
-            sz.addResource("C:\\Users\\Wang Wei\\Desktop\\test_music.mp3");
+            sz.addResource(test_resource_path);
 
 
         //manager.shut_down();

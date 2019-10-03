@@ -74,6 +74,7 @@ class ServerSocket_n extends Thread {
             try {
                 courier.listen_message();
             } catch (IOException e) {
+                e.printStackTrace();
                 System.out.println("[CLIENT HANDLER] "+courier.getHostIp()+" has disconnected");
             }
             System.out.println("[CLIENT HANDLER] SHUT DOWN");

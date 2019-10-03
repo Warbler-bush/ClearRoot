@@ -155,13 +155,15 @@ public class Safezone {
         courier.connect(keeper,Courier.PORT);
         byte[] file = courier.file_request(safezone_id,password,res.getName());
         courier.disconnect();
-        overwrite_file(res.getName(),file);
+        overwrite_file(getFolderPath()+"\\"+ res.getName(),file);
         res.setRemote_modified(false);
     }
 
     /*Replaces a file with a new data file*/
-    public void overwrite_file(String file_name, byte[] file_data) throws IOException {
-        Files.write(Paths.get(getFolderPath() + "\\" + file_name),file_data);
+    void overwrite_file(String path, byte[] file_data) throws IOException {
+        File file = new File(path);
+        file.createNewFile();
+        Files.write(Paths.get(path),file_data);
     }
 
     /*creates a local copy of a resource*/
@@ -173,10 +175,14 @@ public class Safezone {
 
     /*reports to other peers that a file has been updated*/
     private void update_resource(Resource res) {
+        update_file(res.getName());
+    }
+
+    void update_file(String file) {
         for (String keeper_ip: keepers_ip ) {
             try {
                 courier.connect(keeper_ip,Courier.PORT);
-                courier.report_file_update(safezone_id, password, res.getName());
+                courier.report_file_update(safezone_id, password, file);
                 courier.disconnect();
             } catch (IOException e) {
                 System.out.println(keeper_ip+" is unreachable");
@@ -184,6 +190,8 @@ public class Safezone {
 
         }
     }
+    /**/
+
 
     /*delete the whole safezone folder and the resources owned by it*/
     private void delete() throws  IllegalArgumentException{
@@ -228,7 +236,7 @@ public class Safezone {
     /*loading the info file*/
 
 
-    public void load_info_file(byte[] file){
+     void load_info_file(byte[] file){
         String info_file = new String(file);
         String[] fields =  info_file.split("\r\n");
         setID( Integer.parseInt(fields[0]) );
@@ -275,13 +283,14 @@ public class Safezone {
             String name = fields2[0];
             String owner = fields2[1];
             String syn_type = fields[2].replace(" ","");
-            addResource( Resource.importResource( name,
+
+            addResource( Resource.importResource(name,
                     owner , Integer.parseInt(syn_type)  ));
         }
 
     }
 
-    public synchronized void load_info_file(){
+     synchronized void load_info_file(){
         try{
             String info_file_path = SAFEZONES_FOLDER_PATH + getID() + "\\" + getID() + ".sz";
             load_info_file(Files.readAllBytes(Paths.get(info_file_path)));
@@ -321,7 +330,7 @@ public class Safezone {
 
     /*writing info file into file or byte[]*/
 
-    public byte[] get_info_file() {
+     byte[] get_info_file() {
 
         StringBuilder stringBuilder =  new StringBuilder();
         stringBuilder.append(getID()).append("\r\n");
@@ -352,7 +361,7 @@ public class Safezone {
 
 
     /*update the safezone file*/
-    public void update_safezone_file() throws IOException {
+     void update_safezone_file() throws IOException {
         /*Writing on file*/
         File file = new File(getInfoPath());
         BufferedWriter bw = new BufferedWriter(new FileWriter(file));
@@ -392,7 +401,7 @@ public class Safezone {
     }
 
     /*rewrite the current log file*/
-    public void update_log_file() {
+     void update_log_file() {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(getCloudLogPath()))){
             for(int i = 0 ; i< resources.size(); i++) {
                 Resource res = resources.get(i);
@@ -407,7 +416,7 @@ public class Safezone {
     }
 
     /*read the online log and adds to the log of the resources*/
-    public void reload_online_log(){
+     void reload_online_log(){
         String log_file_path_cloud = getCloudLogPath();
         BufferedReader br = null;
         try {
@@ -481,7 +490,7 @@ public class Safezone {
     }
 
     /*actually it read the whole log_file  and check if the resources were modified*/
-    public  void load_local_log_file(){
+      void load_local_log_file(){
         String log_file_path = getLocalLogPath();
         String log_file_path_cloud = getCloudLogPath();
 
@@ -588,19 +597,19 @@ public class Safezone {
         return resources.get(idx);
     }
 
-    public String getInfoPath(){
+     String getInfoPath(){
         return getFolderPath()+"\\"+safezone_id+".sz";
     }
 
     public String getFolderPath(){
-        return SAFEZONES_FOLDER_PATH+"\\"+safezone_id;
+        return SAFEZONES_FOLDER_PATH+safezone_id;
     }
 
     public int getID() {
         return safezone_id;
     }
 
-    public void setID(int id){this.safezone_id = id;}
+    private void setID(int id){this.safezone_id = id;}
 
     public boolean isIDEqual(int id){
         return id == this.safezone_id;
@@ -634,11 +643,11 @@ public class Safezone {
         resources.add(res);
     }
 
-    public void addKeepers(String keeper){
+    void addKeepers(String keeper){
         keepers_ip.add(keeper);
     }
 
-    public void setPassword(String password) {
+    private void setPassword(String password) {
         this.password = password;
     }
 
@@ -646,11 +655,11 @@ public class Safezone {
         this.sync_time = sync_time;
     }
 
-    public void setSyn(boolean syn) {
+    private void setSyn(boolean syn) {
         isSyn = syn;
     }
 
-    public boolean removeKeeper(String ip){
+    boolean removeKeeper(String ip){
         return keepers_ip.remove(ip);
     }
 

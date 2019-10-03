@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 
 /*------------------------------------------------------------------------------------*/
@@ -62,10 +64,11 @@ class Courier {
 
     public void report_file_update(int safezone_id, String pass, String filename) throws IOException {
         System.out.println("[COURIER] SENDING FILE UPDATE "+filename+" ...");
-        byte[] file_data = file_to_binary(filename);
+        Safezone safezone = SafezoneManager.Manager().getSafezoneById(safezone_id);
+        byte[] file_data = file_to_binary(safezone.getFolderPath()+"\\"+  filename);
         client.send(PSPacket.RFU_MSG_C(safezone_id, pass, filename,file_data).toBinary());
         PSPacket packet = PSPacket.toPacket(client.receive());
-        if(!packet.isTypeEqual(PSPacket.OK))
+        if(!packet.isTypeEqual(PSPacket.OKS))
             throw new IOException();
     }
 
@@ -74,9 +77,7 @@ class Courier {
     }
 
     private byte[] file_to_binary(String file_path) throws IOException {
-        FileInputStream in = new FileInputStream(file_path);
-        byte[] data = in.readAllBytes();
-        in.close();
+        byte[] data = Files.readAllBytes(Paths.get(file_path));;
         return data;
     }
 
@@ -98,11 +99,11 @@ class Courier {
             if (packet.isTypeEqual(PSPacket.FRQ)) {
                 System.out.println("[COURIER S.] FILE REQUEST "+packet.getFilename());
 
-                String path = SafezoneManager.SAFEZONES_FOLDER_PATH+"\\"+packet.getSafezone_id();
-
                 try{
-                file_answer( packet.getSafezone_id(), new String(packet.getPassword()) , packet.getFilename(),
-                        file_to_binary(path+"\\"+packet.getFilename()  ));
+                    Safezone sz = SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id());
+
+                    file_answer( packet.getSafezone_id(), new String(packet.getPassword()) , packet.getFilename(),
+                        file_to_binary( sz.getFolderPath()+"\\"+ packet.getFilename()  ));
                 }catch (FileNotFoundException e){
                     System.out.println("[COURIER S.] safezone "+packet.getSafezone_id()+" hasn't a log file yet");
 
@@ -112,21 +113,30 @@ class Courier {
             if (packet.isTypeEqual(PSPacket.RFU)) {
                 System.out.print("[COURIER S.] FILE UPDATE "+packet.getFilename());
                 Safezone safezone = SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id());
-                safezone.overwrite_file(safezone.getFolderPath()+"\\"+packet.getFilename(), packet.getData());
-                client.send(PSPacket.OK_MSG_C().toBinary());
+                String path =safezone.getFolderPath()+"\\"+  packet.getFilename();
+                System.out.println("[COURIER S.] path:"+path);
+                safezone.overwrite_file(path , packet.getData() );
+                client.send(PSPacket.OKS_MSG_C().toBinary());
             }
 
             if(packet.isTypeEqual(PSPacket.SZJ)){
+                String asker_ip = new String(packet.getData());
+
                 System.out.println("[COURIER S.] REQUEST SAFEZONE JOIN");
-                System.out.println("[COURIER S.] "+client.getHostAddress()+" has joined the safezone");
+                System.out.println("[COURIER S.] "+asker_ip+" has joined the safezone");
                 Safezone safezone = SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id());
+
                 accept_safezone_join(safezone.getID(),safezone.getPassword(),safezone.get_info_file());
+
+                safezone.addKeepers(asker_ip);
+                safezone.update_safezone_file();
             }
 
             if(packet.isTypeEqual(PSPacket.SZE)){
-                System.out.printf("[COURIER S.] REQUEST SAFEZONE EXIT");
-                SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id()).removeKeeper(client.getHostAddress());
-                client.send(PSPacket.OK_MSG_C().toBinary());
+                String asker_ip = new String(packet.getData());
+                System.out.printf("[COURIER S.] " + asker_ip +" REQUEST SAFEZONE EXIT");
+                SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id()).removeKeeper(asker_ip  );
+                client.send(PSPacket.OKS_MSG_C().toBinary());
             }
 
         }
@@ -140,7 +150,7 @@ class Courier {
         client.send(PSPacket.SZE_MSG_C(safezone_id,password).toBinary());
         PSPacket packet = PSPacket.toPacket(client.receive());
 
-        if (!packet.isTypeEqual(PSPacket.OK))
+        if (!packet.isTypeEqual(PSPacket.OKS))
             throw new IOException("[Courier] Exit from safezone unsuccessfull");
 
     }
@@ -159,10 +169,11 @@ class Courier {
     }
 
     public void accept_safezone_join(int safezone_id, String pass,byte[] safezone_file) throws IOException {
-        client.send(PSPacket.RQA_MSG_C().toBinary());
+       client.send(PSPacket.RQA_MSG_C().toBinary());
 
-        PSPacket packet1 = PSPacket.FAW_MSG_C(safezone_id,pass,"info_file",safezone_file);
-        client.send(packet1.toBinary());
+       Safezone safezone = SafezoneManager.Manager().getSafezoneById(safezone_id);
+       PSPacket packet1 = PSPacket.FAW_MSG_C( safezone_id,pass,safezone.getID()+".sz",safezone_file);
+       client.send(packet1.toBinary());
     }
 
 
@@ -329,7 +340,7 @@ class Courier {
 
         /*OK ALL GOOD*/
         /*OK*/
-        protected static final char[] OK = "OK".toCharArray();
+        protected static final char[] OKS = "OKS".toCharArray();
 
         /*ERROR*/
         /*ERR used for error occur when something went wrong*/
@@ -557,8 +568,8 @@ class Courier {
         }
 
         /* OK ALL GOOD, AFFERMATIVE*/
-        public static PSPacket OK_MSG_C(){
-            PSPacket packet = new PSPacket(OK);
+        public static PSPacket OKS_MSG_C(){
+            PSPacket packet = new PSPacket(OKS);
             return packet;
         }
 
@@ -574,6 +585,7 @@ class Courier {
             PSPacket packet = new PSPacket(SZJ);
             packet.setSafezoneID(safezone_id);
             packet.setPassword(password.getBytes());
+            packet.setData(NetworkManger.getMyIP().getBytes());
             return packet;
         }
 

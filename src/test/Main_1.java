@@ -8,6 +8,11 @@ import java.util.Scanner;
 
 public class Main_1 {
     public static void main(String[] args) {
+
+        /*sembrerebbe che nella sincronizazzione di are you mine si disconnetta prima*/
+        final String test_res_path= "D:\\TDDOWNLOAD\\projects\\ClearSystem\\ClearRoot\\Resources\\are_you_mine.mp3";
+
+
         String ip = "";
         Scanner scanner = new Scanner(System.in);
 
@@ -29,15 +34,24 @@ public class Main_1 {
         NetworkManger manager =NetworkManger.manager();
 
 
+        /*
         System.out.print("Insert the peer to join the safezone:");
         String peer_ip = scanner.nextLine();
+        */
 
+        String access_peer = "127.0.0.3";
+        Safezone sz = null;
         try {
-            Safezone sz =  manager.join_safezone(2,"42",peer_ip);
+            sz =  manager.join_safezone(2,"42",access_peer);
         } catch (IOException e) {
             System.out.println("Error joining the safezone");
             e.printStackTrace();
         }
+
+        if(sz != null){
+            sz.addResource(test_res_path);
+        }
+
 
         //manager.shut_down();
     }

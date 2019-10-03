@@ -10,7 +10,10 @@ public class Main_4 {
 
     public static void main(String[] args) {
         String ip = "";
-        Scanner scanner = new Scanner(System.in);
+
+        //Scanner scanner = new Scanner(System.in);
+
+        final String test_res_path= "D:\\TDDOWNLOAD\\projects\\ClearSystem\\ClearRoot\\Resources\\blue.mp3";
 
         /*
         System.out.print("Insert root path of folder 'safezones' of this process:");
@@ -29,16 +32,21 @@ public class Main_4 {
         NetworkManger.setSafezoneManagerFolderPathRoot(root);
         NetworkManger manager =NetworkManger.manager();
 
-
+        /*
         System.out.print("Insert the peer to join the safezone:");
         String peer_ip = scanner.nextLine();
+        */
 
+        String access_peer = "127.0.0.1";
         try {
-            Safezone sz =  manager.join_safezone(2,"42",peer_ip);
+            Safezone sz =  manager.join_safezone(2,"42", access_peer);
+            sz.addResource(test_res_path);
         } catch (IOException e) {
             System.out.println("Error joining the safezone");
             e.printStackTrace();
         }
+
+
 
         //manager.shut_down();
     }
