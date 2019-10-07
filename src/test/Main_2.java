@@ -4,6 +4,9 @@ import PNPLibrary.NetworkManger;
 
 import java.util.Scanner;
 
+
+/*the only tracker for now*/
+
 public class Main_2 {
     public static void main(String[] args) {
         String ip = "";

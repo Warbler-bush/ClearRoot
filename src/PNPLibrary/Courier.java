@@ -34,14 +34,14 @@ class Courier {
 
     public void connect(String ip, int port) throws IOException {
 
-        System.out.println("[COURIER] SENDING CON...");
+        //System.out.println("[COURIER] SENDING CON...");
         client.connect( ip,port);
         client.send(PSPacket.CON_MSG_C().toBinary());
         PSPacket packet = PSPacket.toPacket(client.receive());
 
         if(!packet.isTypeEqual(PSPacket.RQA))
             throw new IOException();
-        System.out.println("[COURIER] RQA ARRIVED");
+        //System.out.println("[COURIER] RQA ARRIVED");
     }
 
     public void connect(String ip) throws  IOException{
@@ -85,7 +85,11 @@ class Courier {
 
         System.out.println("[COURIER S.] CON REQUEST");
         PSPacket packet = PSPacket.toPacket( client.receive());
-        client.send(PSPacket.RQA_MSG_C().toBinary());
+        if(packet.isTypeEqual(PSPacket.CON))
+            client.send(PSPacket.RQA_MSG_C().toBinary());
+        else{
+            System.out.println("[COURIER S.] the peer is not asking to connect");
+        };
 
         while(!ServerSocket_n.STOP_SERVER) {
             packet = PSPacket.toPacket(client.receive());
@@ -97,7 +101,7 @@ class Courier {
             }
 
             if (packet.isTypeEqual(PSPacket.FRQ)) {
-                System.out.println("[COURIER S.] FILE REQUEST "+packet.getFilename());
+                System.out.println("[COURIER S.]["+client.getHostIp()+ "]FILE REQUEST "+packet.getFilename());
 
                 try{
                     Safezone sz = SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id());
@@ -111,7 +115,7 @@ class Courier {
             }
 
             if (packet.isTypeEqual(PSPacket.RFU)) {
-                System.out.print("[COURIER S.] FILE UPDATE "+packet.getFilename());
+                System.out.println("[COURIER S.] FILE UPDATE "+packet.getFilename());
                 Safezone safezone = SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id());
                 String path =safezone.getFolderPath()+"\\"+  packet.getFilename();
                 System.out.println("[COURIER S.] path:"+path);
@@ -182,7 +186,7 @@ class Courier {
     }
 
     public void disconnect() throws IOException {
-        System.out.println("[COURIER] SEND FIN");
+        //System.out.println("[COURIER] SEND FIN");
         client.send(PSPacket.FIN_MSG_C().toBinary());
         client.disconnect();
     }

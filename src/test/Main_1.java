@@ -13,6 +13,9 @@ public class Main_1 {
         final String test_res_path= "D:\\TDDOWNLOAD\\projects\\ClearSystem\\ClearRoot\\Resources\\are_you_mine.mp3";
 
 
+
+
+
         String ip = "";
         Scanner scanner = new Scanner(System.in);
 
@@ -31,7 +34,8 @@ public class Main_1 {
         NetworkManger.init(false,ip,true);
         NetworkManger.setSafezonesListPathRoot(root);
         NetworkManger.setSafezoneManagerFolderPathRoot(root);
-        NetworkManger manager =NetworkManger.manager();
+
+        NetworkManger manager = NetworkManger.manager();
 
 
         /*

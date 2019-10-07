@@ -17,5 +17,6 @@
         <SOURCES />
       </library>
     </orderEntry>
+    <orderEntry type="library" name="WaifUPnP" level="project" />
   </component>
 </module>

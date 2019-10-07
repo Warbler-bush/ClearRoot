@@ -5,6 +5,8 @@ package PNPLibrary;
 /*------------------------------------------------------------------------------------*/
 
 
+import com.dosse.upnp.UPnP;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileInputStream;
@@ -27,6 +29,8 @@ class ClientSocket_n  {
 
     public void connect(String ip, int port) throws IOException{
         socket = new Socket(ip, port);
+        UPnP.openPortTCP(port);
+
         dOut = new DataOutputStream(socket.getOutputStream());
         dIn = new DataInputStream(socket.getInputStream());
     }
