@@ -104,7 +104,7 @@ public class Safezone {
     }
 
     /*see the documentation */
-    public void syn() throws IOException {
+    void syn() throws IOException {
 
         System.out.println("[SAFEZONE "+getID()+"]"  +" start syn...");
 
@@ -574,7 +574,7 @@ public class Safezone {
     /*------------------------------------*/
     /*ACCESSORS METHOD: GETTERS/ SETTERS */
     /*------------------------------------*/
-    public boolean isSyn(){
+    boolean isSyn(){
         return isSyn;
     }
 
@@ -586,22 +586,18 @@ public class Safezone {
         return SAFEZONES_FOLDER_PATH+ getID()+"\\"+getID()+"_log.rs";
     }
 
-    public Resource getResourceByName(String name){
+    public Resource getResource(String name){
         for(int i = 0; i< resources.size(); i++)
             if(resources.get(i).getName().equals(name))
                 return resources.get(i);
         return null;
     }
 
-    public Resource getResourceByIndex(int idx ){
-        return resources.get(idx);
-    }
-
-     String getInfoPath(){
+    private String getInfoPath(){
         return getFolderPath()+"\\"+safezone_id+".sz";
     }
 
-    public String getFolderPath(){
+    String getFolderPath(){
         return SAFEZONES_FOLDER_PATH+safezone_id;
     }
 
@@ -639,8 +635,9 @@ public class Safezone {
         return sync_time;
     }
 
-    public void addResource(Resource res){
-        resources.add(res);
+    void addResource(Resource res){
+        if(!hasResource(res.getName()))
+            resources.add(res);
     }
 
     void addKeepers(String keeper){
@@ -651,7 +648,7 @@ public class Safezone {
         this.password = password;
     }
 
-    public void setSync_time(int sync_time) {
+    void setSync_time(int sync_time) {
         this.sync_time = sync_time;
     }
 
@@ -671,9 +668,6 @@ public class Safezone {
     }
 
     public void addResource(String path)   {
-
-
-
         Path _path = Paths.get(path);
         String fname = new File(path).getName();
 
@@ -702,6 +696,40 @@ public class Safezone {
             e.printStackTrace();
         }
         update_resource(res);
+    }
+
+    public boolean removeResource(String fname){
+        return removeResource(getResource(fname));
+    }
+
+    boolean removeResource(Resource res){
+
+        if( res.getSyn_type() == Resource.RESTRICTED ){
+
+            if(res.getOwner_ip().equals(NetworkManger.getMyIP())) {
+                for (String ip : keepers_ip) {
+                    Courier courier = CourierManager.Manager().createCourier();
+                    try {
+                        courier.connect(ip);
+                        courier.report_file_remove(getID(), password, res.getName());
+                        courier.disconnect();
+                    } catch (IOException e) {
+                        System.out.println("[SAFEZONE " + getID() + "]" + ip + " is not reachable!");
+                    }
+                }
+            }
+
+
+            try {
+                Files.deleteIfExists(Paths.get(getFolderPath() + "\\" + res.getName()) );
+            } catch (IOException e) {
+                System.out.println("[SAFEZONE "+getID() +"]"+res.getName()+" is not possible to delete");
+            }
+            resources.remove(res);
+            return false;
+        }
+
+        return true;
     }
 
 }

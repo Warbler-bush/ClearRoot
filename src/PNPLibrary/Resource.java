@@ -28,7 +28,7 @@ class Resource{
 
     /*constructors*/
 
-    private Resource(String name , String owner_ip, int syn_type){
+    Resource(String name, String owner_ip, int syn_type){
         this.name = name;
         this.owner_ip = owner_ip;
         this.syn_type = syn_type;

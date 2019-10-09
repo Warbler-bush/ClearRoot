@@ -41,6 +41,7 @@ public class Main_4 {
         try {
             Safezone sz =  manager.join_safezone(2,"42", access_peer);
             sz.addResource(test_res_path);
+            sz.removeResource("blue.mp3" );
         } catch (IOException e) {
             System.out.println("Error joining the safezone");
             e.printStackTrace();
