@@ -1,0 +1,45 @@
+------------------------------------------------------------------------
+CREATING DDL
+------------------------------------------------------------------------
+
+Class Library(.NET standard) is the template for .ddl library.
+
+if you want to upload the library on NuGet you need to create a project
+selecting the Class Library. Dx on the name of solution and go to "Properties"
+->Package-> check "Generate Nuget package on build".
+
+go to "Properties"->"Build"->"Output path"-> select the folder where 
+you want the local NuGet library stays. 
+
+then simply build the project.
+
+In the client program where you want to use the library just go on 
+dx solution->"Nuget Package manage"-> Package source -> button in the right
+and configure a new location for getting local NuGet source.
+
+
+------------------------------------------------------------------------
+STATIC LIBRARY
+------------------------------------------------------------------------
+Static library is a library that is linked before the creation of executable 
+file, and it is somehow integrated to the source code.
+It's an operation of reorganization and copy paste to the source code to create
+a stand alone file. 
+
+
+------------------------------------------------------------------------
+SHARED LIBRARY
+------------------------------------------------------------------------
+Shared library is a library that are shared by EXECUTABLE FILES, so 
+multiple programs uses the same modules without copying it. 
+They are loaded when the first client program is lunched.
+
+The modern OS treats them as a executable program.
+
+----------------------------------------------------------------------------
+DYNAMIC-LINK LIBRARY (DDL, WINDOWS) OR DYNAMIC SHARED OBJECT(DSO, Unix-Like)
+----------------------------------------------------------------------------
+The linker does litte work in the creation of a prograrm but the major is 
+done in the loading or in run-time(Done by the linker that's part of the 
+OS). 
+
