@@ -47,6 +47,10 @@ class Resource{
         last_update = new Date();
     }
 
+    Resource(String name,String owner,int syn_type,Date date){
+        this(name,owner,syn_type);
+        setLast_update(date);
+    }
 
     /*GETTERS & SETTERS*/
 
@@ -99,12 +103,9 @@ class Resource{
 
     public String getFullOnlineLog(){
         String ret = "";
-        for(int i = 0; i< log_file_online.size()-1; i++) {
+        for(int i = log_file_online.size()-1; i>= 0; i--) {
+            ret+="\r\n";
             BaseLog log = log_file_online.get(i);
-            ret += log.toLog() + "\r\n";
-        }
-        if(log_file_online.size()>0) {
-            BaseLog log = log_file_online.get(log_file_online.size() - 1);
             ret += log.toLog();
         }
 
@@ -133,6 +134,10 @@ class Resource{
 
     public static Resource importResource(String name , String owner_ip, int syn_type){
         return new Resource(name,owner_ip,syn_type);
+    }
+
+    public static Resource importResource(String name , String owner_ip, int syn_type, Date date){
+        return new Resource(name,owner_ip,syn_type,date);
     }
 
     public void setRemote_modified(boolean remote_modified) {

@@ -29,7 +29,7 @@ class ClientSocket_n  {
 
     public void connect(String ip, int port) throws IOException{
         socket = new Socket(ip, port);
-        UPnP.openPortTCP(port);
+        //UPnP.openPortTCP(port);
 
         dOut = new DataOutputStream(socket.getOutputStream());
         dIn = new DataInputStream(socket.getInputStream());

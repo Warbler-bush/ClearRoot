@@ -40,9 +40,11 @@ class ServerSocket_n extends Thread {
         /* https://stackoverflow.com/questions/14976867/how-can-i-bind-serversocket-to-specific-ip */
         /*backlog is the same argument of listen() in the berkley socket*/
         serverSocket =  new ServerSocket(port,50, InetAddress.getByName(ip) );
-        UPnP.openPortTCP(port);
 
+
+        /*
         System.out.println("Attempting UPnP port forwarding...");
+
         if (UPnP.isUPnPAvailable()) { //is UPnP available?
             if (UPnP.isMappedTCP(port)) { //is the port already mapped?
                 System.out.println("UPnP port forwarding not enabled: port is already mapped");
@@ -53,7 +55,7 @@ class ServerSocket_n extends Thread {
             }
         } else {
             System.out.println("UPnP is not available");
-        }
+        }*/
 
         while (!STOP_SERVER)
             new ClientHandler(serverSocket.accept()).start();

@@ -120,7 +120,10 @@ class SafezoneManager {
 
         create_safezone_file(safezone);
         create_safezone_log_file(safezone);
+
+
         update_safezone_list(safezone);
+        safezone.report_safezone_join();
 
         for(int i = 0; i< safezone.getResourcesCount(); i++)
             safezone.getResource(i).setRemote_modified(true);

@@ -82,6 +82,7 @@ public class NetworkManger {
         if(manager == null) {
             try {
                 manager = new NetworkManger(isTracker, myIP);
+                manager.syn();
             }catch (IOException e){
                 e.printStackTrace();
                 System.out.println("[NETWORK MANAGER] Error init");
@@ -151,9 +152,15 @@ public class NetworkManger {
         /*LOADING THE SAFEZONES INFORMATION*/
         safezoneManager.init_safezones();
         /* SYNCHRONIZE THE FILES OF SAFEZONES WITH OTHER PEERS */
-        safezoneManager.syn();
 
+    }
 
+    public void syn(){
+        try {
+            safezoneManager.syn();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void loadSAFEZONES() {

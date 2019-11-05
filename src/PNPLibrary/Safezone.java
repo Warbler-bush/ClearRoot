@@ -1,11 +1,7 @@
 package PNPLibrary;
 
 import java.io.*;
-import java.net.InetAddress;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -91,7 +87,6 @@ public class Safezone {
     private String search_a_keeper() throws  IOException{
         String keeper = null;
 
-
         for(int i = 0; i< keepers_ip.size() && keeper == null ; i++){
             if(NetworkManger.isOnlinePeer(keepers_ip.get(i)))
                 keeper = keepers_ip.get(i);
@@ -106,9 +101,13 @@ public class Safezone {
     /*see the documentation */
     void syn() throws IOException {
 
-        System.out.println("[SAFEZONE "+getID()+"]"  +" start syn...");
 
-        load_online_log_file();
+        System.out.println("[SAFEZONE "+getID()+"]"  +" start syn...");
+        boolean areKeepers_online =  load_online_log_file();
+
+        if(!areKeepers_online)
+            return;
+
 
         for(int i = 0; i< resources.size(); i++){
             Resource res = resources.get(i);
@@ -178,10 +177,13 @@ public class Safezone {
         update_file(res.getName());
     }
 
-    void update_file(String file) {
+    private void update_file(String file) {
+        getResource(file).addLog(new BaseLog(new Date(), new String( Courier.PSPacket.RFU),NetworkManger.getMyIP()));
+        update_log_file();
+
         for (String keeper_ip: keepers_ip ) {
             try {
-                courier.connect(keeper_ip,Courier.PORT);
+                courier.connect(keeper_ip);
                 courier.report_file_update(safezone_id, password, file);
                 courier.disconnect();
             } catch (IOException e) {
@@ -189,6 +191,8 @@ public class Safezone {
             }
 
         }
+
+
     }
     /**/
 
@@ -262,7 +266,7 @@ public class Safezone {
             line_counter++;
             keeper = fields[line_counter];
             if(!keeper.equals(NetworkManger.getMyIP()))
-                addKeepers(keeper);
+                addKeeper(keeper);
         }
 
         line_counter++;
@@ -294,35 +298,6 @@ public class Safezone {
         try{
             String info_file_path = SAFEZONES_FOLDER_PATH + getID() + "\\" + getID() + ".sz";
             load_info_file(Files.readAllBytes(Paths.get(info_file_path)));
-            /*
-            BufferedReader br = new BufferedReader(
-                    new FileReader(info_file_path));
-            setID( Integer.parseInt(  br.readLine()) );
-
-            setPassword(br.readLine());
-
-            setSync_time(Integer.parseInt(br.readLine()));
-            setSyn(false);
-
-            /SETTING THE KEEPERS/
-
-            int n_keepers = Integer.parseInt(br.readLine() );
-            String keeper = null;
-
-            for(int k = 0; k< n_keepers; k++) {
-                keeper = br.readLine();
-                if(!keeper.equals(NetworkManger.getMyIP()))
-                    addKeepers(keeper);
-            }
-
-            int n_resources = Integer.parseInt(
-                    br.readLine());
-            for(int k = 0; k< n_resources; k++){
-                String[] fields = br.readLine().split(" ");
-                addResource( Resource.importResource( fields[0],
-                        fields[1] , Integer.parseInt(fields[2])  ));
-            }
-            br.close();*/
         }catch (IOException e) {
             e.printStackTrace();
         }
@@ -361,7 +336,9 @@ public class Safezone {
 
 
     /*update the safezone file*/
-     void update_safezone_file() throws IOException {
+     void update_safezone_file() {
+
+        try{
         /*Writing on file*/
         File file = new File(getInfoPath());
         BufferedWriter bw = new BufferedWriter(new FileWriter(file));
@@ -398,49 +375,47 @@ public class Safezone {
 
 
         bw.close();
+        }
+        catch (IOException e){
+            e.printStackTrace();
+        }
     }
 
     /*rewrite the current log file*/
      void update_log_file() {
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(getCloudLogPath()))){
-            for(int i = 0 ; i< resources.size(); i++) {
-                Resource res = resources.get(i);
-                bw.write("#" + (i+1));
-                bw.newLine();
-                bw.write(res.getFullOnlineLog());
-            }
+        StringBuilder log  = new StringBuilder();
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /*read the online log and adds to the log of the resources*/
-     void reload_online_log(){
-        String log_file_path_cloud = getCloudLogPath();
-        BufferedReader br = null;
-        try {
-            br = new BufferedReader(new FileReader(log_file_path_cloud));
-            add_log(br,false);
-            br.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (ParseException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+        for(int i = 0 ; i< resources.size()-1; i++) {
+            Resource res = resources.get(i);
+            log.append("#").append(i + 1);
+            log.append(res.getFullOnlineLog());
+            log.append("\r\n");
         }
 
-    }
+         Resource res = resources.get(resources.size()-1);
+         log.append("#").append(resources.size());
+         log.append(res.getFullOnlineLog());
+
+
+
+         try {
+             Files.write(Paths.get(getCloudLogPath()), log.toString().getBytes());
+         } catch (IOException e) {
+             e.printStackTrace();
+         }
+     }
+
+
 
     /*retrieve the online file*/
-    private   void load_online_log_file(){
+    private boolean load_online_log_file(){
         try{
             courier.connect(search_a_keeper(),Courier.PORT);
 
             String log_file_name = safezone_id+"_log.rs";
             byte[] b_log_file = courier.file_request(safezone_id, password, log_file_name);
 
+            courier.disconnect();
 
             String log_file = new String(b_log_file);
             String lines[] = log_file.split("\r\n");
@@ -460,13 +435,14 @@ public class Safezone {
                     continue;
                 }
 
+
                 String[] fields = line.split(" ");
                 // the moment in which the change request or report is arrived
                 Date date = new SimpleDateFormat("dd/MM/yyyy-hh:mm:ss").parse(fields[0]);
                 //type of modification
                 String type_modif =fields[1];
                 String peer = fields[2];
-
+                res.addLog(new BaseLog(date,type_modif,peer));
 
                 assert res != null;
 
@@ -479,14 +455,19 @@ public class Safezone {
                 cnt++;
             }
 
-            courier.disconnect();
 
             overwrite_file(log_file_name,b_log_file);
             reload_online_log();
-        }catch (IOException | ParseException e) {
+        }catch (IOException e ) {
             System.out.println("[SAFEZONE] None of the keepers are reachable");
+            return  false;
+        }catch ( ParseException e){
+            System.out.println("[SAFEZONE] Parsing error:");
+            e.printStackTrace();
+            return false;
         }
 
+        return true;
     }
 
     /*actually it read the whole log_file  and check if the resources were modified*/
@@ -515,7 +496,25 @@ public class Safezone {
         }
     }
 
-    /*for now the log file isn't full read but it is used only for knowing if the resources were modified locally*/
+    /*read the online log and adds to the log of the resources*/
+    void reload_online_log(){
+        String log_file_path_cloud = getCloudLogPath();
+        BufferedReader br = null;
+        try {
+            br = new BufferedReader(new FileReader(log_file_path_cloud));
+            add_log(br,false);
+            br.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (ParseException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    /*At the moment the log file isn't full read but it is used only for knowing if the resources were or not modified locally*/
     private  void add_log(BufferedReader br,boolean is_local_file) throws IOException, ParseException {
         String line = "";
         Resource res = null;
@@ -579,12 +578,16 @@ public class Safezone {
     }
 
     public String getLocalLogPath(){
-        return SAFEZONES_FOLDER_PATH+ getID()+"\\"+getID()+"_log_local.rs";
+        return getFolderPath()+"\\"+getID()+"_log_local.rs";
     }
 
     public String getCloudLogPath(){
-        return SAFEZONES_FOLDER_PATH+ getID()+"\\"+getID()+"_log.rs";
+        return getFolderPath()+"\\"+getID()+"_log.rs";
     }
+
+    public String getResourcePath(Resource res){return getFolderPath()+"\\"+ res.getName();}
+
+    public String getResourcePath(String filename){return getFolderPath()+"\\"+filename;}
 
     public Resource getResource(String name){
         for(int i = 0; i< resources.size(); i++)
@@ -635,13 +638,11 @@ public class Safezone {
         return sync_time;
     }
 
-    void addResource(Resource res){
-        if(!hasResource(res.getName()))
-            resources.add(res);
-    }
 
-    void addKeepers(String keeper){
-        keepers_ip.add(keeper);
+
+    void addKeeper(String keeper){
+        if(!keepers_ip.contains(keeper))
+            keepers_ip.add(keeper);
     }
 
     private void setPassword(String password) {
@@ -667,8 +668,15 @@ public class Safezone {
         return false;
     }
 
+    Resource addResource(Resource res){
+        if(!hasResource(res.getName())) {
+            resources.add(res);
+            return res;
+        }
+        return null;
+    }
+
     public void addResource(String path)   {
-        Path _path = Paths.get(path);
         String fname = new File(path).getName();
 
         if(hasResource(fname)){
@@ -688,14 +696,22 @@ public class Safezone {
         resources.add(res);
         res.addLog(new BaseLog(new Date(), new String(Courier.PSPacket.RFA),NetworkManger.getMyIP()) );
         update_log_file();
+        update_safezone_file();
 
-        try {
-            update_safezone_file();
-        } catch (IOException e) {
-            System.out.println("[Safezone "+getID()+"] FAILED TO UPDATE SAFEZONE FILE");
-            e.printStackTrace();
+        report_add_file(res);
+    }
+
+    private void report_add_file(Resource res) {
+        for (String ip: keepers_ip) {
+            Courier courier = CourierManager.Manager().createCourier();
+            try {
+                courier.connect(ip);
+                courier.report_file_add(getID(),getPassword(),res.getName());
+                courier.disconnect();
+            } catch (IOException e) {
+                System.out.println("[SAFEZONE "+getID()+"]"+ip+" can't be reached");
+            }
         }
-        update_resource(res);
     }
 
     public boolean removeResource(String fname){
@@ -707,6 +723,7 @@ public class Safezone {
         if( res.getSyn_type() == Resource.RESTRICTED ){
 
             if(res.getOwner_ip().equals(NetworkManger.getMyIP())) {
+
                 for (String ip : keepers_ip) {
                     Courier courier = CourierManager.Manager().createCourier();
                     try {
@@ -717,7 +734,9 @@ public class Safezone {
                         System.out.println("[SAFEZONE " + getID() + "]" + ip + " is not reachable!");
                     }
                 }
+                res.addLog(new BaseLog(new Date(), new String(Courier.PSPacket.RFR),NetworkManger.getMyIP() ));
             }
+
 
 
             try {
@@ -732,6 +751,28 @@ public class Safezone {
         return true;
     }
 
+    public boolean report_modification_file(String fname){
+        return report_modification_file(getResource(fname));
+    }
+
+    boolean report_modification_file(Resource res){
+        update_file(res.getName());
+        return true;
+    }
+
+    public void report_safezone_join(){
+        Courier courier = CourierManager.Manager().createCourier();
+
+        for (String ip: keepers_ip) {
+            try{
+                courier.connect(ip);
+                courier.report_sasfezone_join(safezone_id,password);
+                courier.disconnect();
+            }catch (IOException e){
+                System.out.println( ip+" peer is unreachable");
+            }
+        }
+    }
 }
 
 

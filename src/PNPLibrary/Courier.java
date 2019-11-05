@@ -2,8 +2,6 @@ package PNPLibrary;
 
 import javafx.util.Pair;
 
-import javax.swing.plaf.IconUIResource;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.Socket;
@@ -11,7 +9,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Arrays;
+import java.text.ParseException;
 
 /*------------------------------------------------------------------------------------*/
 /* COURIER                                                                           */
@@ -66,8 +64,36 @@ class Courier {
         System.out.println("[COURIER] SENDING FILE UPDATE "+filename+" ...");
         Safezone safezone = SafezoneManager.Manager().getSafezoneById(safezone_id);
         byte[] file_data = file_to_binary(safezone.getFolderPath()+"\\"+  filename);
+
         PSPacket packet = PSPacket.RFU_MSG_C(safezone_id, pass, filename,file_data);
+
         packet.setFlags((byte) safezone.getResource(filename).getSyn_type());
+
+        Resource res = safezone.getResource(filename);
+        packet.setFlags((byte) res.getSyn_type());
+
+        String fields = NetworkManger.getMyIP()+"&"+ Resource.DateToString(res.getLast_update());
+        packet.setOptions(fields.getBytes());
+
+        client.send(packet.toBinary());
+        packet = PSPacket.toPacket(client.receive());
+        if(!packet.isTypeEqual(PSPacket.OKS))
+            throw new IOException();
+    }
+
+    public void report_file_add(int safezone_id, String pass, String filename) throws IOException {
+        System.out.println("[COURIER] SENDING FILE ADD "+filename+ " ...");
+        Safezone safezone = SafezoneManager.Manager().getSafezoneById(safezone_id);
+        byte[] file_data = file_to_binary(safezone.getFolderPath()+"\\"+  filename);
+
+        PSPacket packet = PSPacket.RFA_MSG_C(safezone_id, pass, filename,file_data);
+
+        Resource res = safezone.getResource(filename);
+        packet.setFlags((byte) res.getSyn_type());
+
+        String fields = NetworkManger.getMyIP()+"&"+ Resource.DateToString(res.getLast_update()) ;
+        packet.setOptions(fields.getBytes());
+
         client.send(packet.toBinary());
         packet = PSPacket.toPacket(client.receive());
         if(!packet.isTypeEqual(PSPacket.OKS))
@@ -77,13 +103,29 @@ class Courier {
     public void report_file_remove(int safezone_id,String pass, String filename) throws IOException {
         System.out.println("[COURIER] SENDING FILE REMOVE "+ filename +" ...");
         PSPacket packet = PSPacket.RFR_MSG_C(safezone_id,pass,filename);
-        packet.setFlags((byte) Resource.RESTRICTED);
+
+        Safezone safezone = SafezoneManager.Manager().getSafezoneById(safezone_id);
+
+        Resource res = safezone.getResource(filename);
+        packet.setFlags((byte) res.getSyn_type());
+
+        String fields = NetworkManger.getMyIP()+"&"+ Resource.DateToString(res.getLast_update()) ;
+        packet.setOptions(fields.getBytes());
+
         client.send(packet.toBinary());
         packet =  PSPacket.toPacket( client.receive() );
         if(!packet.isTypeEqual(PSPacket.OKS) )
             throw new IOException();
     }
 
+    public void report_sasfezone_join(int safezone_id,String pass) throws IOException {
+        PSPacket packet = PSPacket.RSJ_MSG_C(safezone_id,pass);
+        client.send(packet.toBinary());
+
+        packet = PSPacket.toPacket(client.receive());
+        if(!packet.isTypeEqual(PSPacket.OKS))
+            throw  new IOException();
+    }
 
     public void file_answer(int safezone_id, String pass, String filename, byte[] data) throws IOException{
         client.send(PSPacket.FAW_MSG_C(safezone_id, pass, filename, data).toBinary() );
@@ -107,8 +149,9 @@ class Courier {
         while(!ServerSocket_n.STOP_SERVER) {
             packet = PSPacket.toPacket(client.receive());
 
+
             if(packet.isTypeEqual(PSPacket.FIN)){
-                System.out.println("[COURIER S.] DISCONNECT");
+                System.out.println("[COURIER S.] "+client.getHostIp()+" DISCONNECT");
                 client.disconnect();
                 return;
             }
@@ -130,10 +173,62 @@ class Courier {
             if (packet.isTypeEqual(PSPacket.RFU)) {
                 System.out.println("[COURIER S.] FILE UPDATE "+packet.getFilename());
                 Safezone safezone = SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id());
-                safezone.addResource(new Resource(packet.filename,client.getHostIp(),packet.getFlags() ));
+
                 String path =safezone.getFolderPath()+"\\"+  packet.getFilename();
                 System.out.println("[COURIER S.] path:"+path);
+
+
+                String options = new String( packet.getOptions());
+                String[] fields = options.split("&");
+
+                try {
+                    safezone.getResource(packet.getFilename()).addLog(new BaseLog(Resource.StringToDate(fields[1]),new String(PSPacket.RFU),fields[0]) );
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                }
+
+                safezone.update_log_file();
                 safezone.overwrite_file(path , packet.getData() );
+                client.send(PSPacket.OKS_MSG_C().toBinary());
+            }
+
+            if(packet.isTypeEqual(PSPacket.RFA)){
+
+                System.out.println("[COURIER S.] FILE ADD"+packet.getFilename());
+                Safezone safezone = SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id());
+                String options = new String( packet.getOptions());
+                String[] fields = options.split("&");
+
+                try {
+                    safezone.addResource(Resource.importResource(packet.filename,fields[0],packet.getFlags(),Resource.StringToDate(fields[1])  ))
+                            .addLog(new BaseLog(Resource.StringToDate(fields[1]) , new String(PSPacket.RFA), fields[0]));
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                }
+
+                String path =safezone.getFolderPath()+"\\"+  packet.getFilename();
+                System.out.println("[COURIER S.] path:"+path);
+
+                safezone.update_safezone_file();
+                safezone.update_log_file();
+                safezone.overwrite_file(path , packet.getData() );
+                client.send(PSPacket.OKS_MSG_C().toBinary());
+            }
+
+            if(packet.isTypeEqual(PSPacket.RFR)){
+                System.out.println("[COURIER S.] REPORT FILE DELETE:"+packet.getFilename());
+                Safezone safezone = SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id());
+
+                String options = new String( packet.getOptions());
+                String[] fields = options.split("&");
+                try {
+                    safezone.getResource(packet.filename).addLog(new BaseLog(Resource.StringToDate(fields[1]) , new String(PSPacket.RFR), fields[0]) );
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                }
+                safezone.update_log_file();
+
+                safezone.removeResource(packet.getFilename());
                 client.send(PSPacket.OKS_MSG_C().toBinary());
             }
 
@@ -146,8 +241,15 @@ class Courier {
 
                 accept_safezone_join(safezone.getID(),safezone.getPassword(),safezone.get_info_file());
 
-                safezone.addKeepers(asker_ip);
                 safezone.update_safezone_file();
+            }
+
+            if(packet.isTypeEqual(PSPacket.RSJ)){
+                String asker_ip = new String(packet.getOptions());
+                Safezone safezone = SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id());
+                safezone.addKeeper(asker_ip);
+
+                client.send(PSPacket.OKS_MSG_C().toBinary());
             }
 
             if(packet.isTypeEqual(PSPacket.SZE)){
@@ -157,12 +259,7 @@ class Courier {
                 client.send(PSPacket.OKS_MSG_C().toBinary());
             }
 
-            if(packet.isTypeEqual(PSPacket.RFR)){
-                System.out.println("[COURIER S.] REPORT FILE DELETE:"+packet.getFilename());
-                Safezone safezone = SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id());
-                safezone.removeResource(packet.getFilename());
-                client.send(PSPacket.OKS_MSG_C().toBinary());
-            }
+
 
         }
 
@@ -208,7 +305,7 @@ class Courier {
     }
 
     public void disconnect() throws IOException {
-        //System.out.println("[COURIER] SEND FIN");
+        System.out.println("[COURIER] SEND FIN");
         client.send(PSPacket.FIN_MSG_C().toBinary());
         client.disconnect();
     }
@@ -288,6 +385,7 @@ class Courier {
         /* general data for send files and other messages*/
         private byte[] data;
 
+        private byte[] options;
 
         /*--------------------------------------------------*/
         /* TYPE OF MESSAGES                                 */
@@ -314,6 +412,12 @@ class Courier {
         /* KICK OUT SAFEZONE*/
         /* KOS used for kicking out an inactive peer */
         protected static final char[] KOS = "KOS".toCharArray();
+
+        /* REPORT SAFEZONE REPORT */
+        /* RSJ is used for notifying the other peers
+         that you have joined the safezone*/
+        protected static final char[] RSJ = "RSJ".toCharArray();
+
 
         /*----------------------------------------------------*/
 
@@ -397,6 +501,7 @@ class Courier {
             this.filename_length = 0;
             this.filename = "";
             this.data = new byte[0];
+            this.options = new byte[0];
         }
 
         private PSPacket(){
@@ -412,7 +517,7 @@ class Courier {
             this.filename_length = 0;
             this.filename = "";
             this.data = new byte[0];
-
+            this.options = new byte[0];
         }
 
         /*-----------------------------------------------------*/
@@ -466,6 +571,14 @@ class Courier {
             return this;
         }
 
+        private PSPacket setOptions(byte[] options){
+            if(options != null)
+                this.options = options;
+            else return null;
+
+            return this;
+        }
+
 
         public int getId() {
             return id;
@@ -492,6 +605,8 @@ class Courier {
         }
 
         public byte[] getData(){return data;}
+
+        public byte[] getOptions(){return options;}
         /*-----------------------------------------------------*/
         /* CONVERTS INTEGER TO BINARY AND VICE VERSA           */
         /*-----------------------------------------------------*/
@@ -518,9 +633,11 @@ class Courier {
         /*CONVERSION INTO BINARY INFORMATION FOR SENDING THROUGH SOCKET */
         /*--------------------------------------------------------------*/
         protected byte[] toBinary(){
-            /* id:int , safezone_id:int, type:char[3], password:byte[PASS_DIM](256), filename_length:int , filename:string, data:bytes[]+ flags:byte */
-            int total_size = Integer.BYTES*3 + 3* Character.BYTES +
-                    password.length + filename_length*Character.BYTES+ data.length+ Byte.BYTES;
+            /* id:int , safezone_id:int, type:char[3], password:byte[PASS_DIM](256), filename_length:int , filename:string, data:bytes[]+ flags:byte,
+            *           options_length:int, options:byte[]*/
+            int total_size = Integer.BYTES*4 + 3* Character.BYTES +
+                    password.length + filename_length*Character.BYTES+ data.length+ Byte.BYTES +
+                    options.length;
 
             ByteBuffer buffer = ByteBuffer.allocate(total_size);
             buffer.putInt(id);
@@ -535,6 +652,9 @@ class Courier {
 
             buffer.putInt(filename_length);
             buffer.put(filename.getBytes());
+
+            buffer.putInt(options.length);
+            buffer.put(options);
             buffer.put(data);
 
             return buffer.array();
@@ -566,6 +686,11 @@ class Courier {
             buffer.get(tmp,0,packet.filename_length);
             packet.filename = new String(tmp);
 
+
+            int option_length = buffer.getInt();
+            packet.options = new byte[option_length];
+            buffer.get(packet.options,0,option_length);
+
             packet.data = new byte[buffer.remaining()];
             buffer.get(packet.data,0, buffer.remaining());
             return packet;
@@ -575,6 +700,7 @@ class Courier {
         /*------------------------------------------------------------------------*/
         /*CREATING PACKET FOR THE PROTOCOL     _C stands for create               */
         /*------------------------------------------------------------------------*/
+
 
 
         /* CREATING CONNECTION MESSAGE  */
@@ -623,6 +749,16 @@ class Courier {
             PSPacket packet = new PSPacket(SZE);
             packet.setSafezoneID(safezone_id);
             packet.setPassword(password.getBytes());
+            return packet;
+        }
+
+
+        /* REPORTING THE JOINING OF A SAFEZONE*/
+        public static PSPacket RSJ_MSG_C(int safezone_id, String password){
+            PSPacket packet = new PSPacket(RSJ);
+            packet.setSafezoneID(safezone_id);
+            packet.setPassword(password.getBytes());
+            packet.setOptions(NetworkManger.getMyIP().getBytes());
             return packet;
         }
 
@@ -690,6 +826,7 @@ class Courier {
             packet.setPassword(password.getBytes());
             packet.setFilenameLength(file_name.length());
             packet.setFileName(file_name);
+            packet.setData(file);
 
             return packet;
         }

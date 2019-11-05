@@ -3,14 +3,16 @@ package test;
 import PNPLibrary.NetworkManger;
 import PNPLibrary.Safezone;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Scanner;
 
 public class Main_1 {
     public static void main(String[] args) {
 
-        /*sembrerebbe che nella sincronizazzione di are you mine si disconnetta prima*/
         final String test_res_path= "D:\\TDDOWNLOAD\\projects\\ClearSystem\\ClearRoot\\Resources\\are_you_mine.mp3";
+        final String test_res_path1= "D:\\TDDOWNLOAD\\projects\\ClearSystem\\ClearRoot\\Resources\\readme.txt";
 
 
 
@@ -47,6 +49,7 @@ public class Main_1 {
         Safezone sz = null;
         try {
             sz =  manager.join_safezone(2,"42",access_peer);
+
         } catch (IOException e) {
             System.out.println("Error joining the safezone");
             e.printStackTrace();
@@ -54,7 +57,20 @@ public class Main_1 {
 
         if(sz != null){
             sz.addResource(test_res_path);
+            sz.addResource(test_res_path1);
+
+
+            try {
+                BufferedWriter bw = new BufferedWriter(new FileWriter( sz.getResourcePath("readme.txt"),true));
+                bw.append("\nreadthis!");
+                bw.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            sz.report_modification_file("readme.txt");
+
         }
+
 
 
 

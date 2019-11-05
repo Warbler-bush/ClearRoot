@@ -8,24 +8,8 @@ public class Main_3 {
     public static void main(String[] args) {
         final String test_resource_path = "D:\\TDDOWNLOAD\\projects\\ClearSystem\\ClearRoot\\Resources\\arctic_monkey_arabella.mp3";
 
-        String ip = "";
-
-
-        /*
-        Scanner scanner = new Scanner(System.in);
-
-
-        System.out.print("Insert root path of folder 'safezones' of this process:");
-        String root = scanner.nextLine();
-        */
         String root = "P3";
-
-        /*
-        System.out.print("Insert the ip of the peer in localhost format (127.0.0.x)[x: 1-254]:");
-        ip = scanner.nextLine();
-        */
-
-        ip="127.0.0.3";
+        String ip = "127.0.0.3";
 
         NetworkManger.init(false, ip,true);
         NetworkManger.setSafezonesListPathRoot(root);
