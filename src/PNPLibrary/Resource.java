@@ -8,7 +8,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 
-class Resource{
+public class Resource{
     private String name;
     private Date last_update;
     private String owner_ip;

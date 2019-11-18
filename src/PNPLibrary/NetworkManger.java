@@ -1,18 +1,9 @@
 package PNPLibrary;
 
-import javax.sound.midi.Track;
 import java.io.*;
 import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
-
-import static java.util.Collections.synchronizedList;
 
 public class NetworkManger {
 
@@ -280,7 +271,6 @@ public class NetworkManger {
             tracker.stop();
         } catch (Exception e) {
             System.out.println("[NETWORK MANAGER] TRACKER SUCCESSFULLY STOPPED");
-            e.printStackTrace();
         }
 
         Tracker.STOP_TRACKER = true;
@@ -376,9 +366,22 @@ public class NetworkManger {
         SafezonesFile = root+"\\"+SafezonesFile;
     }
 
+    public int szCount(){
+        return SafezoneManager.Manager().szCount();
+    }
+
+    public Safezone getSafezone(int idx){
+        return SafezoneManager.Manager().getSafezone(idx);
+    }
+
+    public Safezone getSafezoneById(int id){
+        return SafezoneManager.Manager().getSafezoneById(id);
+    }
+
     public boolean isLO() {
         return LO;
     }
+
 }
 
 

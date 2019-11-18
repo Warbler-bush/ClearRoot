@@ -197,6 +197,16 @@ class SafezoneManager {
         System.out.println("[SAFEZONE MANAGER] SYN DONE");
     }
 
+    public int szCount(){
+        return safezones.size();
+    }
+
+    public Safezone getSafezone(int idx){
+        if(idx >= safezones.size())
+            return null;
+        return safezones.get(idx);
+    }
+
     /*UPDATES THE LOG FILES OF ALL THE SAFEZONES*/
     public void update_log_files() {
         for(Safezone s : safezones){
