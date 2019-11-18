@@ -2,6 +2,7 @@ package PNPLibrary;
 
 import java.io.*;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -56,6 +57,21 @@ public class NetworkManger {
     /*----------------------------------*/
     /*NETWORK METHODS                   */
     /*----------------------------------*/
+
+
+    public static void init(){
+            init(false);
+
+    }
+
+    public static void init(boolean isTracker){
+        try {
+            init(isTracker,InetAddress.getLocalHost().getHostAddress(),false);
+        } catch (UnknownHostException e) {
+            System.out.println("WTF, YOU DONT KNOW YOURSELF IP?");
+        }
+    }
+
 
     /*sets the "ip" and the flag "is Tracker" */
     public static void init(boolean isTracker,String ip,boolean isLO){
@@ -234,7 +250,7 @@ public class NetworkManger {
                 }
 
                 if(token == 'T')
-                    if(!line.equals(InetAddress.getLocalHost().getHostAddress()))
+                    //if(!line.equals(InetAddress.getLocalHost().getHostAddress()))
                         trackers.add(line);
 
 

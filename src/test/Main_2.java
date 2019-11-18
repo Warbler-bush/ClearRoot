@@ -9,7 +9,6 @@ import java.util.Scanner;
 
 public class Main_2 {
     public static void main(String[] args) {
-        String ip = "";
         /*
         Scanner scanner = new Scanner(System.in);
 
@@ -22,9 +21,7 @@ public class Main_2 {
         //System.out.print("Insert the ip of the peer in localhost format (127.0.0.x)[x: 1-254]:");
         //ip = scanner.nextLine();
 
-        ip = "127.0.0.2";
-
-        NetworkManger.init(true,ip,true);
+        NetworkManger.init(true);
         NetworkManger.setSafezonesListPathRoot(root);
         NetworkManger.setSafezoneManagerFolderPathRoot(root);
         NetworkManger manager =NetworkManger.manager();

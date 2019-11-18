@@ -1,7 +1,5 @@
 package PNPLibrary;
 
-import com.dosse.upnp.UPnP;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;

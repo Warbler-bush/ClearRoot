@@ -18,8 +18,7 @@ public class CRConsole {
         String root = "DefaultUser";
         String cur_idc = ""+INDICATOR_DEFAULT;
 
-        String ip = "127.0.0.4";
-        NetworkManger.init(false,ip,true);
+        NetworkManger.init(false);
         NetworkManger.setSafezonesListPathRoot(root);
         NetworkManger.setSafezoneManagerFolderPathRoot(root);
         NetworkManger manager =NetworkManger.manager();

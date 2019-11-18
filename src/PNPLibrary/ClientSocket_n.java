@@ -5,7 +5,6 @@ package PNPLibrary;
 /*------------------------------------------------------------------------------------*/
 
 
-import com.dosse.upnp.UPnP;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
