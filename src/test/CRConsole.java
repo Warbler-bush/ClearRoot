@@ -59,7 +59,7 @@ public class CRConsole {
             }
 
             if(cmd.equals("mksz")){
-                if(fields.length != 4 ){
+                if(fields.length != 3 ){
                     System.out.println("USAGE: mksz SAFEZONE_ID PASS");
                     continue;
                 }
@@ -161,8 +161,12 @@ public class CRConsole {
 
 
 
-            if(cmd.equals("exit"))
-                break;
+            if(cmd.equals("exit")){
+                if(sz != null){
+                    sz = null;
+                    cur_idc = INDICATOR_DEFAULT+"";
+                }else break;
+            }
 
             System.out.println("command not found!");
 

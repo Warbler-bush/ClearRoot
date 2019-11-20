@@ -194,7 +194,7 @@ public class NetworkManger {
             char token = ' ';
 
             while( (line = br.readLine()) != null) {
-                if(line.isBlank() || line.isEmpty())
+                if(line.matches(" *") || line.isEmpty())
                     continue;
 
                 if(line.equals( "/trackers") ) {
@@ -236,7 +236,7 @@ public class NetworkManger {
             char token = ' ';
 
             while( (line = br.readLine()) != null) {
-                if(line.isBlank() || line.isEmpty())
+                if(line.matches(" *") || line.isEmpty())
                     continue;
 
                 if(line.equals( "/trackers") ) {
