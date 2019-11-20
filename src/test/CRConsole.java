@@ -58,6 +58,19 @@ public class CRConsole {
                 continue;
             }
 
+            if(cmd.equals("mksz")){
+                if(fields.length != 4 ){
+                    System.out.println("USAGE: mksz SAFEZONE_ID PASS");
+                    continue;
+                }
+                int sz_id = Integer.parseInt(fields[1]);
+                String pass = fields[2];
+                sz =  manager.create_safezone(sz_id,pass);
+
+                cur_idc = INDICATOR_SAFEZONE+""+sz_id+">";
+                continue;
+            }
+
             /*select*/
             if(cmd.equals("slc")){
                 if(fields.length!= 2){
