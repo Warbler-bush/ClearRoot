@@ -165,6 +165,7 @@ public class CRConsole {
                 if(sz != null){
                     sz = null;
                     cur_idc = INDICATOR_DEFAULT+"";
+                    continue;
                 }else break;
             }
 

@@ -9,6 +9,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
 
 /*------------------------------------------------------------------------------------*/
@@ -537,13 +539,17 @@ class Courier {
             return this;
         }
 
-        private PSPacket setPassword(byte[] password){
+        private PSPacket setPassword(String pass){
+            byte[] sha = new byte[PASS_DIM];
+            try {
+                sha = MessageDigest.getInstance("SHA-256").digest( pass.getBytes());
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            }
+
 
             /*contains the allocated size*/
-            if(password.length == PASS_DIM)
-                this.password = password;
-            else return null;
-
+            this.password = sha;
             return this;
         }
 
@@ -739,7 +745,7 @@ class Courier {
         public static PSPacket SZJ_MSG_C(int safezone_id,String password){
             PSPacket packet = new PSPacket(SZJ);
             packet.setSafezoneID(safezone_id);
-            packet.setPassword(password.getBytes());
+            packet.setPassword(password);
             packet.setData(NetworkManger.getMyIP().getBytes());
             return packet;
         }
@@ -748,7 +754,7 @@ class Courier {
         public static PSPacket SZE_MSG_C(int safezone_id, String password){
             PSPacket packet = new PSPacket(SZE);
             packet.setSafezoneID(safezone_id);
-            packet.setPassword(password.getBytes());
+            packet.setPassword(password);
             return packet;
         }
 
@@ -757,7 +763,7 @@ class Courier {
         public static PSPacket RSJ_MSG_C(int safezone_id, String password){
             PSPacket packet = new PSPacket(RSJ);
             packet.setSafezoneID(safezone_id);
-            packet.setPassword(password.getBytes());
+            packet.setPassword(password);
             packet.setOptions(NetworkManger.getMyIP().getBytes());
             return packet;
         }
@@ -766,7 +772,7 @@ class Courier {
         public static PSPacket KOS_MSG_C(int safezone_id, String password, String ip_peer){
             PSPacket packet = new PSPacket(KOS);
             packet.setSafezoneID(safezone_id);
-            packet.setPassword(password.getBytes());
+            packet.setPassword(password);
             packet.setData(ip_peer.getBytes());
             return packet;
         }
@@ -787,7 +793,7 @@ class Courier {
         public static PSPacket FRQ_MSG_C(int safezone_id, String password,String file_name){
             PSPacket packet = new PSPacket(FRQ);
             packet.setSafezoneID(safezone_id);
-            packet.setPassword(password.getBytes());
+            packet.setPassword(password);
             packet.setFilenameLength(file_name.length());
             packet.setFileName(file_name);
 
@@ -798,7 +804,7 @@ class Courier {
         public static PSPacket FAW_MSG_C(int safezone_id, String password,String file_name, byte[] data){
             PSPacket packet = new PSPacket(FAW);
             packet.setSafezoneID(safezone_id);
-            packet.setPassword(password.getBytes());
+            packet.setPassword(password);
             packet.setFilenameLength(file_name.length());
             packet.setFileName(file_name);
             packet.data = data;
@@ -810,7 +816,7 @@ class Courier {
         public static PSPacket OWC_MSG_C(int safezone_id, String password, String file_name,byte[] new_owner){
             PSPacket packet = new PSPacket(OWC);
             packet.setSafezoneID(safezone_id);
-            packet.setPassword(password.getBytes());
+            packet.setPassword(password);
             packet.setFilenameLength(file_name.length());
             packet.setFileName(file_name);
             packet.data = new_owner;
@@ -823,7 +829,7 @@ class Courier {
         public static PSPacket RFU_MSG_C(int safezone_id, String password, String file_name, byte[] file){
             PSPacket packet = new PSPacket(RFU);
             packet.setSafezoneID(safezone_id);
-            packet.setPassword(password.getBytes());
+            packet.setPassword(password);
             packet.setFilenameLength(file_name.length());
             packet.setFileName(file_name);
             packet.setData(file);
@@ -835,7 +841,7 @@ class Courier {
         public static PSPacket RFA_MSG_C(int safezone_id, String password, String file_name, byte[] file){
             PSPacket packet = new PSPacket(RFA);
             packet.setSafezoneID(safezone_id);
-            packet.setPassword(password.getBytes());
+            packet.setPassword(password);
             packet.setFilenameLength(file_name.length());
             packet.setFileName(file_name);
 
@@ -846,7 +852,7 @@ class Courier {
         public static PSPacket RFR_MSG_C(int safezone_id, String password, String file_name){
             PSPacket packet = new PSPacket(RFR);
             packet.setSafezoneID(safezone_id);
-            packet.setPassword(password.getBytes());
+            packet.setPassword(password);
             packet.setFilenameLength(file_name.length());
             packet.setFileName(file_name);
 
