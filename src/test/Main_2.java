@@ -21,7 +21,7 @@ public class Main_2 {
         //System.out.print("Insert the ip of the peer in localhost format (127.0.0.x)[x: 1-254]:");
         //ip = scanner.nextLine();
 
-        NetworkManger.init(true);
+        NetworkManger.init(true, "127.0.0.2",true);
         NetworkManger.setSafezonesListPathRoot(root);
         NetworkManger.setSafezoneManagerFolderPathRoot(root);
         NetworkManger manager =NetworkManger.manager();

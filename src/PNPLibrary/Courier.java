@@ -353,7 +353,7 @@ class Courier {
     protected static class  PSPacket {
 
         private static String CHARSET = "ISO-8859-1";
-        private static int PASS_DIM = 256;
+        private static int PASS_DIM = 32;
 
         /*--------------------------------------------------*/
         /* FIELDS OF PNPLibrary.PSPacket                               */
@@ -684,7 +684,7 @@ class Courier {
 
             packet.safezone_id = buffer.getInt();
             packet.flags = buffer.get();
-            buffer.get(packet.password, 0, PASS_DIM);
+            buffer.get(packet.password, 0, packet.password.length);
 
             packet.filename_length = buffer.getInt();
 
