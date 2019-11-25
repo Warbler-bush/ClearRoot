@@ -24,7 +24,7 @@ public class NetworkManger {
     private static final int DNS_PORT = 53;
 
     /*connection test in localhost*/
-    private static final String GOD_TRACKER_IP = "127.0.0.2";
+    private static final String GOD_TRACKER_IP = "192.168.1.59";
     private static final int GOD_TRACKER_PORT = Tracker.PORT;
 
     private static  boolean LO = false;
@@ -82,6 +82,14 @@ public class NetworkManger {
 
     public static void init(boolean isTracker,String ip){
         init(isTracker,ip,false);
+    }
+
+    public static void init(boolean isTracker, boolean isLO){
+        try {
+            init(isTracker,InetAddress.getLocalHost().getHostAddress(),isLO);
+        } catch (UnknownHostException e) {
+            System.out.println("WTF, YOU DONT KNOW YOURSELF IP?");
+        }
     }
 
     /*before calling the manager the client of this library should first call init() */

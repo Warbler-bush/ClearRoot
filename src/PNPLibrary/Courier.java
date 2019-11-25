@@ -642,7 +642,7 @@ class Courier {
             /* id:int , safezone_id:int, type:char[3], password:byte[PASS_DIM](256), filename_length:int , filename:string, data:bytes[]+ flags:byte,
             *           options_length:int, options:byte[]*/
             int total_size = Integer.BYTES*4 + 3* Character.BYTES +
-                    password.length + filename_length*Character.BYTES+ data.length+ Byte.BYTES +
+                    password.length + filename_length+ data.length+ Byte.BYTES +
                     options.length;
 
             ByteBuffer buffer = ByteBuffer.allocate(total_size);
@@ -844,7 +844,7 @@ class Courier {
             packet.setPassword(password);
             packet.setFilenameLength(file_name.length());
             packet.setFileName(file_name);
-
+            packet.setData(file);
             return packet;
         }
 

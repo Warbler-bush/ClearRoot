@@ -421,8 +421,13 @@ public class Safezone {
             String lines[] = log_file.split("\r\n");
             int cnt = 0;
 
+            if(lines.length == 1)
+                cnt = 1;
+
             String line = "";
             Resource res = null;
+
+
 
             while( cnt < lines.length) {
                 line = lines[cnt];
@@ -685,7 +690,7 @@ public class Safezone {
         }
 
         try {
-            Files.copy(Paths.get(path) , Paths.get(getFolderPath()+"\\"+fname) );
+            Files.copy(Paths.get(path) , Paths.get(getFolderPath()+"\\"+fname ) );
         } catch (IOException e) {
             System.out.println("[Safezone "+getID()+"] A Resource with the same name already exists");
             e.printStackTrace();
