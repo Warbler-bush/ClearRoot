@@ -34,14 +34,14 @@ class Courier {
 
     public void connect(String ip, int port) throws IOException {
 
-        //System.out.println("[COURIER] SENDING CON...");
+        //PeerLogSystem.writeln("[COURIER] SENDING CON...");
         client.connect( ip,port);
         client.send(PSPacket.CON_MSG_C().toBinary());
         PSPacket packet = PSPacket.toPacket(client.receive());
 
         if(!packet.isTypeEqual(PSPacket.RQA))
             throw new IOException();
-        //System.out.println("[COURIER] RQA ARRIVED");
+        //PeerLogSystem.writeln("[COURIER] RQA ARRIVED");
     }
 
     public void connect(String ip) throws  IOException{
@@ -50,7 +50,7 @@ class Courier {
 
     public byte[] file_request(int safezone_id,String pass,String filename) throws IOException {
 
-        System.out.println("[COURIER] SENDING FRQ "+ filename+" ...");
+        PeerLogSystem.writeln("[COURIER] SENDING FRQ "+ filename+" ...");
         client.send(PSPacket.FRQ_MSG_C(safezone_id, pass ,filename).toBinary() );
         PSPacket packet  = PSPacket.toPacket( client.receive() );
 
@@ -58,12 +58,12 @@ class Courier {
             throw new IOException();
         }
 
-        System.out.println("[COURIER] FAW ARRIVED");
+        PeerLogSystem.writeln("[COURIER] FAW ARRIVED");
         return packet.getData();
     }
 
     public void report_file_update(int safezone_id, String pass, String filename) throws IOException {
-        System.out.println("[COURIER] SENDING FILE UPDATE "+filename+" ...");
+        PeerLogSystem.writeln("[COURIER] SENDING FILE UPDATE "+filename+" ...");
         Safezone safezone = SafezoneManager.Manager().getSafezoneById(safezone_id);
         byte[] file_data = file_to_binary(safezone.getFolderPath()+"\\"+  filename);
 
@@ -84,7 +84,7 @@ class Courier {
     }
 
     public void report_file_add(int safezone_id, String pass, String filename) throws IOException {
-        System.out.println("[COURIER] SENDING FILE ADD "+filename+ " ...");
+        PeerLogSystem.writeln("[COURIER] SENDING FILE ADD "+filename+ " ...");
         Safezone safezone = SafezoneManager.Manager().getSafezoneById(safezone_id);
         byte[] file_data = file_to_binary(safezone.getFolderPath()+"\\"+  filename);
 
@@ -103,7 +103,7 @@ class Courier {
     }
 
     public void report_file_remove(int safezone_id,String pass, String filename) throws IOException {
-        System.out.println("[COURIER] SENDING FILE REMOVE "+ filename +" ...");
+        PeerLogSystem.writeln("[COURIER] SENDING FILE REMOVE "+ filename +" ...");
         PSPacket packet = PSPacket.RFR_MSG_C(safezone_id,pass,filename);
 
         Safezone safezone = SafezoneManager.Manager().getSafezoneById(safezone_id);
@@ -140,12 +140,12 @@ class Courier {
 
     public void listen_message() throws IOException {
 
-        System.out.println("[COURIER S.] CON REQUEST");
+        PeerLogSystem.writeln("[COURIER S.] CON REQUEST");
         PSPacket packet = PSPacket.toPacket( client.receive());
         if(packet.isTypeEqual(PSPacket.CON))
             client.send(PSPacket.RQA_MSG_C().toBinary());
         else{
-            System.out.println("[COURIER S.] the peer is not asking to connect");
+            PeerLogSystem.writeln("[COURIER S.] the peer is not asking to connect");
         };
 
         while(!ServerSocket_n.STOP_SERVER) {
@@ -153,13 +153,13 @@ class Courier {
 
 
             if(packet.isTypeEqual(PSPacket.FIN)){
-                System.out.println("[COURIER S.] "+client.getHostIp()+" DISCONNECT");
+                PeerLogSystem.writeln("[COURIER S.] "+client.getHostIp()+" DISCONNECT");
                 client.disconnect();
                 return;
             }
 
             if (packet.isTypeEqual(PSPacket.FRQ)) {
-                System.out.println("[COURIER S.]["+client.getHostIp()+ "]FILE REQUEST "+packet.getFilename());
+                PeerLogSystem.writeln("[COURIER S.]["+client.getHostIp()+ "]FILE REQUEST "+packet.getFilename());
 
                 try{
                     Safezone sz = SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id());
@@ -167,17 +167,17 @@ class Courier {
                     file_answer( packet.getSafezone_id(), new String(packet.getPassword()) , packet.getFilename(),
                         file_to_binary( sz.getFolderPath()+"\\"+ packet.getFilename()  ));
                 }catch (FileNotFoundException e){
-                    System.out.println("[COURIER S.] safezone "+packet.getSafezone_id()+" hasn't a log file yet");
+                    PeerLogSystem.writeln("[COURIER S.] safezone "+packet.getSafezone_id()+" hasn't a log file yet");
 
                 }
             }
 
             if (packet.isTypeEqual(PSPacket.RFU)) {
-                System.out.println("[COURIER S.] FILE UPDATE "+packet.getFilename());
+                PeerLogSystem.writeln("[COURIER S.] FILE UPDATE "+packet.getFilename());
                 Safezone safezone = SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id());
 
                 String path =safezone.getFolderPath()+"\\"+  packet.getFilename();
-                System.out.println("[COURIER S.] path:"+path);
+                PeerLogSystem.writeln("[COURIER S.] path:"+path);
 
 
                 String options = new String( packet.getOptions());
@@ -196,7 +196,7 @@ class Courier {
 
             if(packet.isTypeEqual(PSPacket.RFA)){
 
-                System.out.println("[COURIER S.] FILE ADD"+packet.getFilename());
+                PeerLogSystem.writeln("[COURIER S.] FILE ADD"+packet.getFilename());
                 Safezone safezone = SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id());
                 String options = new String( packet.getOptions());
                 String[] fields = options.split("&");
@@ -209,7 +209,7 @@ class Courier {
                 }
 
                 String path =safezone.getFolderPath()+"\\"+  packet.getFilename();
-                System.out.println("[COURIER S.] path:"+path);
+                PeerLogSystem.writeln("[COURIER S.] path:"+path);
 
                 safezone.update_safezone_file();
                 safezone.update_log_file();
@@ -218,7 +218,7 @@ class Courier {
             }
 
             if(packet.isTypeEqual(PSPacket.RFR)){
-                System.out.println("[COURIER S.] REPORT FILE DELETE:"+packet.getFilename());
+                PeerLogSystem.writeln("[COURIER S.] REPORT FILE DELETE:"+packet.getFilename());
                 Safezone safezone = SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id());
 
                 String options = new String( packet.getOptions());
@@ -237,8 +237,8 @@ class Courier {
             if(packet.isTypeEqual(PSPacket.SZJ)){
                 String asker_ip = new String(packet.getData());
 
-                System.out.println("[COURIER S.] REQUEST SAFEZONE JOIN");
-                System.out.println("[COURIER S.] "+asker_ip+" has joined the safezone");
+                PeerLogSystem.writeln("[COURIER S.] REQUEST SAFEZONE JOIN");
+                PeerLogSystem.writeln("[COURIER S.] "+asker_ip+" has joined the safezone");
                 Safezone safezone = SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id());
 
                 accept_safezone_join(safezone.getID(),safezone.getPassword(),safezone.get_info_file());
@@ -256,7 +256,7 @@ class Courier {
 
             if(packet.isTypeEqual(PSPacket.SZE)){
                 String asker_ip = new String(packet.getData());
-                System.out.printf("[COURIER S.] " + asker_ip +" REQUEST SAFEZONE EXIT");
+                PeerLogSystem.writeln("[COURIER S.] " + asker_ip +" REQUEST SAFEZONE EXIT");
                 SafezoneManager.Manager().getSafezoneById(packet.getSafezone_id()).removeKeeper(asker_ip  );
                 client.send(PSPacket.OKS_MSG_C().toBinary());
             }
@@ -307,7 +307,7 @@ class Courier {
     }
 
     public void disconnect() throws IOException {
-        System.out.println("[COURIER] SEND FIN");
+        PeerLogSystem.writeln("[COURIER] SEND FIN");
         client.send(PSPacket.FIN_MSG_C().toBinary());
         client.disconnect();
     }
@@ -327,7 +327,7 @@ class Courier {
             throw new IOException();
 
         client.disconnect();
-        System.out.println("[COURIER]Connected to the swarn");
+        PeerLogSystem.writeln("[COURIER]Connected to the swarn");
 
     }
 
@@ -340,7 +340,7 @@ class Courier {
             throw new IOException();
 
         client.disconnect();
-        System.out.println("[COURIER]Exited to the swarn");
+        PeerLogSystem.writeln("[COURIER]Exited to the swarn");
     }
 
 
@@ -903,13 +903,13 @@ class TrackerCourier extends Courier{
         }
 
         if(packet.isTypeEqual(PSPacket.CON)){
-            System.out.println("[COURIER S.] CONNECTED");
+            PeerLogSystem.writeln("[COURIER S.] CONNECTED");
             client.send(PSPacket.RQA_MSG_C().toBinary());
             return new Pair<>(new String(PSPacket.CON),client.getHostAddress());
         }
 
         if(packet.isTypeEqual(PSPacket.FIN)){
-            System.out.println("[COURIER S.] DISCONNECT");
+            PeerLogSystem.writeln("[COURIER S.] DISCONNECT");
             client.disconnect();
             return new Pair<>(new String(PSPacket.FIN),client.getHostAddress());
         }

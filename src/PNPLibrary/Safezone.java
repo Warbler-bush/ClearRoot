@@ -71,10 +71,10 @@ public class Safezone {
             }
 
         }catch (IllegalArgumentException e){
-            System.out.println("The safezone can't delete folder");
+            PeerLogSystem.writeln("The safezone can't delete folder");
             e.printStackTrace();
         }catch (IOException e){
-            System.out.println("Error sending leaving message to the keepers");
+            PeerLogSystem.writeln("Error sending leaving message to the keepers");
             e.printStackTrace();
         }
     }
@@ -102,7 +102,7 @@ public class Safezone {
     void syn() throws IOException {
 
 
-        System.out.println("[SAFEZONE "+getID()+"]"  +" start syn...");
+        PeerLogSystem.writeln("[SAFEZONE "+getID()+"]"  +" start syn...");
         boolean areKeepers_online =  load_online_log_file();
 
         if(!areKeepers_online)
@@ -140,7 +140,7 @@ public class Safezone {
             }
 
         }
-        System.out.println("[SAFEZONE "+getID()+"]"  +" SYN DONE");
+        PeerLogSystem.writeln("[SAFEZONE "+getID()+"]"  +" SYN DONE");
 
     }
 
@@ -189,7 +189,7 @@ public class Safezone {
                     courier.report_file_update(safezone_id, password, file);
                     courier.disconnect();
                 } catch (IOException e) {
-                    System.out.println(keeper_ip+" is unreachable");
+                    PeerLogSystem.writeln(keeper_ip+" is unreachable");
                 }
 
             }
@@ -472,7 +472,7 @@ public class Safezone {
                 if(type_modif.equals("RFU") && !peer.equals(NetworkManger.getMyIP())
                          && date.after(res.get_online_log(0).getDate() ) ){
                     res.setRemote_modified(true);
-                    System.out.println("[SAFEZONE] the resource "+res.getName() +" is remotely changed ");
+                    PeerLogSystem.writeln("[SAFEZONE] the resource "+res.getName() +" is remotely changed ");
                 }
 
                 cnt++;
@@ -482,10 +482,10 @@ public class Safezone {
             overwrite_file(log_file_name,b_log_file);
             reload_online_log();
         }catch (IOException e ) {
-            System.out.println("[SAFEZONE] None of the keepers are reachable");
+            PeerLogSystem.writeln("[SAFEZONE] None of the keepers are reachable");
             return  false;
         }catch ( ParseException e){
-            System.out.println("[SAFEZONE] Parsing error:");
+            PeerLogSystem.writeln("[SAFEZONE] Parsing error:");
             e.printStackTrace();
             return false;
         }
@@ -576,7 +576,7 @@ public class Safezone {
 
             if(is_local_file) {
                 if( first_update && type_modif.equals("RFU")){
-                    System.out.println("[SAFEZONE] the resource "+res.getName() +" is locally changed ");
+                    PeerLogSystem.writeln("[SAFEZONE] the resource "+res.getName() +" is locally changed ");
                     res.setLocal_modified(true);
                     res.setLast_update(date);
                     first_update = false;
@@ -703,14 +703,14 @@ public class Safezone {
         String fname = new File(path).getName();
 
         if(hasResource(fname)){
-            System.out.println("[SAFEZONE"+getID()+"] Resource already exists");
+            PeerLogSystem.writeln("[SAFEZONE"+getID()+"] Resource already exists");
             return ;
         }
 
         try {
             Files.copy(Paths.get(path) , Paths.get(getFolderPath()+"\\"+fname ) );
         } catch (IOException e) {
-            System.out.println("[Safezone "+getID()+"] A Resource with the same name already exists");
+            PeerLogSystem.writeln("[Safezone "+getID()+"] A Resource with the same name already exists");
             e.printStackTrace();
         }
 
@@ -734,7 +734,7 @@ public class Safezone {
                 courier.report_file_add(getID(),getPassword(),res.getName());
                 courier.disconnect();
             } catch (IOException e) {
-                System.out.println("[SAFEZONE "+getID()+"]"+ip+" can't be reached");
+                PeerLogSystem.writeln("[SAFEZONE "+getID()+"]"+ip+" can't be reached");
             }
         }
     }
@@ -756,7 +756,7 @@ public class Safezone {
                         courier.report_file_remove(getID(), password, res.getName());
                         courier.disconnect();
                     } catch (IOException e) {
-                        System.out.println("[SAFEZONE " + getID() + "]" + ip + " is not reachable!");
+                        PeerLogSystem.writeln("[SAFEZONE " + getID() + "]" + ip + " is not reachable!");
                     }
                 }
                 res.addLog(new BaseLog(new Date(), new String(Courier.PSPacket.RFR),NetworkManger.getMyIP() ));
@@ -767,7 +767,7 @@ public class Safezone {
             try {
                 Files.deleteIfExists(Paths.get(getFolderPath() + "\\" + res.getName()) );
             } catch (IOException e) {
-                System.out.println("[SAFEZONE "+getID() +"]"+res.getName()+" is not possible to delete");
+                PeerLogSystem.writeln("[SAFEZONE "+getID() +"]"+res.getName()+" is not possible to delete");
             }
             resources.remove(res);
             return false;
@@ -794,7 +794,7 @@ public class Safezone {
                 courier.report_sasfezone_join(safezone_id,password);
                 courier.disconnect();
             }catch (IOException e){
-                System.out.println( ip+" peer is unreachable");
+                PeerLogSystem.writeln( ip+" peer is unreachable");
             }
         }
     }

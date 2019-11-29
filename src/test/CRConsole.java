@@ -1,10 +1,9 @@
 package test;
+
 import PNPLibrary.NetworkManger;
 import PNPLibrary.Safezone;
 
 import java.io.IOException;
-import java.sql.SQLOutput;
-import java.util.ResourceBundle;
 import java.util.Scanner;
 
 
@@ -19,7 +18,7 @@ public class CRConsole {
         String root = "DefaultUser";
         String cur_idc = ""+INDICATOR_DEFAULT;
 
-        NetworkManger.init(false,true);
+        NetworkManger.init(false,false);
         NetworkManger.setSafezonesListPathRoot(root);
         NetworkManger.setSafezoneManagerFolderPathRoot(root);
         NetworkManger manager =NetworkManger.manager();

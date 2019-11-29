@@ -1,7 +1,6 @@
 package PNPLibrary;
 
 import java.util.Date;
-import java.util.logging.SimpleFormatter;
 
 public class BaseLog {
     private Date date;

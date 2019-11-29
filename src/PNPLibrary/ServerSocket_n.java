@@ -38,27 +38,12 @@ class ServerSocket_n extends Thread {
         /* https://stackoverflow.com/questions/14976867/how-can-i-bind-serversocket-to-specific-ip */
         /*backlog is the same argument of listen() in the berkley socket*/
         serverSocket =  new ServerSocket(port,50, InetAddress.getByName(ip) );
-
-
-        /*
-        System.out.println("Attempting UPnP port forwarding...");
-
-        if (UPnP.isUPnPAvailable()) { //is UPnP available?
-            if (UPnP.isMappedTCP(port)) { //is the port already mapped?
-                System.out.println("UPnP port forwarding not enabled: port is already mapped");
-            } else if (UPnP.openPortTCP(port)) { //try to map port
-                System.out.println("UPnP port forwarding enabled");
-            } else {
-                System.out.println("UPnP port forwarding failed");
-            }
-        } else {
-            System.out.println("UPnP is not available");
-        }*/
+        
 
         while (!STOP_SERVER)
             new ClientHandler(serverSocket.accept()).start();
 
-        System.out.println("[SERVER] SHUT DOWN");
+        PeerLogSystem.writeln("[SERVER] SHUT DOWN");
     }
 
     public void stopRunning() throws Exception {
@@ -70,10 +55,10 @@ class ServerSocket_n extends Thread {
         try {
             startServer();
         } catch (IOException e) {
-            System.out.println("[SERVER] STOP ACCEPPTING CONNECTION");
+            PeerLogSystem.writeln("[SERVER] STOP ACCEPPTING CONNECTION");
         }
 
-        System.out.println("[SERVER] SHUT DOWN");
+        PeerLogSystem.writeln("[SERVER] SHUT DOWN");
     }
 
 
@@ -91,9 +76,9 @@ class ServerSocket_n extends Thread {
                 courier.listen_message();
             } catch (IOException e) {
                 e.printStackTrace();
-                System.out.println("[CLIENT HANDLER] "+courier.getHostIp()+" has disconnected");
+                PeerLogSystem.writeln("[CLIENT HANDLER] "+courier.getHostIp()+" has disconnected");
             }
-            System.out.println("[CLIENT HANDLER] SHUT DOWN");
+            PeerLogSystem.writeln("[CLIENT HANDLER] SHUT DOWN");
         }
 
 

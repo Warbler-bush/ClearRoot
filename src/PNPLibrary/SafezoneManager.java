@@ -29,29 +29,29 @@ class SafezoneManager {
 
     public Safezone create_safezone(int safezone_id, String password, int sync_time) throws IOException {
         if(hasSafezone(safezone_id)){
-            System.out.println("[SAFEZONE MANAGER] the safezone already exist");
+            PeerLogSystem.writeln("[SAFEZONE MANAGER] the safezone already exist");
             return null;
         }
 
-        System.out.print("[SAFEZONE MANAGER] CREATING SAFEZONE "+safezone_id+" ...");
+        PeerLogSystem.write("[SAFEZONE MANAGER] CREATING SAFEZONE "+safezone_id+" ...");
         Safezone sz = new Safezone(safezone_id,password,sync_time);
         safezones.add(sz);
         try {
             update_safezone_list(sz);
         } catch (IOException e) {
-            System.out.println("[SAFEZONE MANAGER] update safezone list failed");
+            PeerLogSystem.writeln("[SAFEZONE MANAGER] update safezone list failed");
             throw new IOException();
         }
 
         try {
             create_safezone_file(sz);
         } catch (IOException e) {
-            System.out.println("[SAFEZONE MANAGER] creation of safezone file failed");
+            PeerLogSystem.writeln("[SAFEZONE MANAGER] creation of safezone file failed");
             throw new IOException();
         }
 
         create_safezone_log_file(sz);
-        System.out.println("DONE");
+        PeerLogSystem.writeln("DONE");
         return sz;
     }
 
@@ -100,7 +100,7 @@ class SafezoneManager {
 
     public Safezone join_safezone(int safezone_id , String password ,String peer_id) throws IOException {
         if(hasSafezone(safezone_id)) {
-            System.out.println("[SAFEZONE MANAGER] safezone "+safezone_id +" already exists");
+            PeerLogSystem.writeln("[SAFEZONE MANAGER] safezone "+safezone_id +" already exists");
             return null;
         }
 
@@ -115,7 +115,7 @@ class SafezoneManager {
 
 
         safezone.load_info_file(safezone_info_file);
-        System.out.println("[SAFEZONE MANAGER] safezone "+safezone.getID()+" joined succefully the safezone");
+        PeerLogSystem.writeln("[SAFEZONE MANAGER] safezone "+safezone.getID()+" joined succefully the safezone");
 
 
         create_safezone_file(safezone);
@@ -194,7 +194,7 @@ class SafezoneManager {
             safezones.get(i).syn();
 
         update_log_files();
-        System.out.println("[SAFEZONE MANAGER] SYN DONE");
+        PeerLogSystem.writeln("[SAFEZONE MANAGER] SYN DONE");
     }
 
     public int szCount(){

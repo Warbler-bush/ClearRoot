@@ -15,10 +15,11 @@ public class NetworkManger {
     /*-----------------------------------*/
 
     private final static String TrackerFile = "Resources\\srepe.lst";
-    public static String SafezonesFile = "safezones.lst";
-    public final static String LOCALHOST = "127.0.0.1";
-    public final static String HOST = "0.0.0.0";
+    static String SafezonesFile = "safezones.lst";
+    final static String LOCALHOST = "127.0.0.1";
+    final static String HOST = "0.0.0.0";
     private static String myIP = null;
+
 
 
     private  static boolean hasConnectivity = false;
@@ -30,10 +31,6 @@ public class NetworkManger {
     private static final String GOD_TRACKER_IP = "127.0.0.1";
 
     private static  boolean LO = false;
-    /*------------------------------------------------*/
-    /*COMMUNICATION ATTRIBUTES                        */
-    /*------------------------------------------------*/
-    private Courier courier;
     private ServerSocket_n server;
 
     /*------------------------------------------------*/
@@ -61,27 +58,18 @@ public class NetworkManger {
     /*----------------------------------*/
 
 
-    private synchronized static void setConnectivity(boolean hasConnectivity){
-        NetworkManger.hasConnectivity = hasConnectivity;
-    }
-
-    public synchronized  static boolean getConnectivity(){
-        return hasConnectivity;
-    }
-
-    public static void init(){
-            init(false);
-
-    }
-
     public static void init(boolean isTracker){
         try {
             init(isTracker,InetAddress.getLocalHost().getHostAddress(),false);
         } catch (UnknownHostException e) {
-            System.out.println("WTF, YOU DONT KNOW YOURSELF IP?");
+            PeerLogSystem.writeln("WTF, YOU DONT KNOW YOURSELF IP?");
         }
     }
 
+
+    public static void init(){
+        init(false);
+    }
 
     /*sets the "ip" and the flag "is Tracker" */
     public static void init(boolean isTracker,String ip,boolean isLO){
@@ -102,8 +90,7 @@ public class NetworkManger {
 
                     hasConnectivity = hasCon;
 
-                } catch (Exception e) {
-                    e.printStackTrace();
+                } catch (Exception ignored) {
                 }
             }
         };
@@ -123,7 +110,7 @@ public class NetworkManger {
         try {
             init(isTracker,InetAddress.getLocalHost().getHostAddress(),isLO);
         } catch (UnknownHostException e) {
-            System.out.println("WTF, YOU DONT KNOW YOURSELF IP?");
+            PeerLogSystem.writeln("WTF, YOU DONT KNOW YOURSELF IP?");
         }
     }
 
@@ -135,11 +122,19 @@ public class NetworkManger {
                 manager.syn();
             }catch (IOException e){
                 e.printStackTrace();
-                System.out.println("[NETWORK MANAGER] Error init");
+                PeerLogSystem.writeln("[NETWORK MANAGER] Error init");
             }
         }
 
         return manager;
+    }
+
+    private synchronized static void setConnectivity(boolean hasConnectivity){
+        NetworkManger.hasConnectivity = hasConnectivity;
+    }
+
+    public synchronized  static boolean getConnectivity(){
+        return hasConnectivity;
     }
 
     /* JOINING THE SWARN and if it's a tracker, starts the Thread of Tracker*/
@@ -149,7 +144,7 @@ public class NetworkManger {
 
         safezoneManager = SafezoneManager.Manager();
 
-        System.out.print("[NETWORK MANAGER] starting the tracker...");
+        PeerLogSystem.write("[NETWORK MANAGER] starting the tracker...");
         /* START THE TRACKER THREAD*/
         try {
             if(isTracker) {
@@ -157,17 +152,17 @@ public class NetworkManger {
                 new Thread(tracker,"TRACKER").start();
             }
         } catch (Exception e) {
-            System.out.println("ERROR STARTING THE TRACKER");
+            PeerLogSystem.writeln("ERROR STARTING THE TRACKER");
             e.printStackTrace();
         }
-        System.out.println("DONE");
+       PeerLogSystem.writeln("DONE");
 
 
-        System.out.print("[NETWORK MANAGER] starting the peer server "+ip+":"+Courier.PORT+"...");
+        PeerLogSystem.write("[NETWORK MANAGER] starting the peer server "+ip+":"+Courier.PORT+"...");
         /* starting the peer receive canal*/
         server = new ServerSocket_n(ip, Courier.PORT);
         server.start();
-        System.out.println("DONE");
+        PeerLogSystem.writeln("DONE");
 
 
 
@@ -175,26 +170,29 @@ public class NetworkManger {
         /*GETTING THE TRACKER AND LOADING THE ID OF THE SAFEZONES*/
 
 
-        System.out.print("[NETWORK MANAGER]loading the srepe...");
+        PeerLogSystem.write("[NETWORK MANAGER]loading the srepe...");
         loadSREPE();
-        System.out.println("DONE");
+        PeerLogSystem.writeln("DONE");
         
-        System.out.println("[NETWORK MANGER] Trackers:"+trackers.toString());
+        PeerLogSystem.writeln("[NETWORK MANGER] Trackers:"+trackers.toString());
 
 
         idxMyTracker = newTracker();
-        System.out.println("[NETWORK MANAGER]myTracker:"+getMyTracker());
+        PeerLogSystem.writeln("[NETWORK MANAGER]myTracker:"+getMyTracker());
 
         /*JOINING THE SWARN */
-        courier = CourierManager.Manager().createCourier();
+        /*------------------------------------------------*/
+        /*COMMUNICATION ATTRIBUTES                        */
+        /*------------------------------------------------*/
+        Courier courier = CourierManager.Manager().createCourier();
         courier.join_swarn(getMyTracker());
         courier.stopRunning();
 
-        System.out.print("[NETWORK MANAGER]loading the safezones...");
+        PeerLogSystem.write("[NETWORK MANAGER]loading the safezones...");
         loadSAFEZONES();
-        System.out.println("DONE");
+        PeerLogSystem.writeln("DONE");
 
-        System.out.println("[NETWORK MANGER] Safezones:"+safezoneManager.toString());
+        PeerLogSystem.writeln("[NETWORK MANGER] Safezones:"+safezoneManager.toString());
 
 
 
@@ -224,7 +222,7 @@ public class NetworkManger {
                 bw.write("/safezones");
                 bw.close();
             } catch (IOException e) {
-                System.out.println("[NETWORK MANAGER] CREATION SAFEZONE LIST FAILED" );
+                PeerLogSystem.writeln("[NETWORK MANAGER] CREATION SAFEZONE LIST FAILED" );
                 e.printStackTrace();
             }
         }
@@ -327,7 +325,7 @@ public class NetworkManger {
             server.stopRunning();
             tracker.stop();
         } catch (Exception e) {
-            System.out.println("[NETWORK MANAGER] TRACKER SUCCESSFULLY STOPPED");
+            PeerLogSystem.writeln("[NETWORK MANAGER] TRACKER SUCCESSFULLY STOPPED");
         }
 
         Tracker.STOP_TRACKER = true;
@@ -348,7 +346,7 @@ public class NetworkManger {
             courier.disconnect();
             isOnline = true;
         }catch (IOException e) {
-            System.out.println("[SAFEZONE] "+ peer_ip +" is unreachable");
+            PeerLogSystem.writeln("[SAFEZONE] "+ peer_ip +" is unreachable");
         }
         return isOnline;
     }
@@ -360,7 +358,7 @@ public class NetworkManger {
             InetAddress addr = InetAddress.getByName(ip);
             ret = addr.isReachable(500);
         } catch (IOException e) {
-            System.out.println("Can't reach "+ip);
+            PeerLogSystem.writeln("Can't reach "+ip);
         }
 
         return ret;
@@ -401,7 +399,7 @@ public class NetworkManger {
         try {
             return safezoneManager.create_safezone(safezone_id,password,sync_time);
         } catch (IOException e) {
-            System.out.println("[NETWORK MANAGER] Safezone creation failed");
+            PeerLogSystem.writeln("[NETWORK MANAGER] Safezone creation failed");
         }
         return null;
     }

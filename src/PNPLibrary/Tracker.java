@@ -38,7 +38,7 @@ class Tracker implements Runnable{
     public Tracker(String ip) {
         this.ip = ip;
         swarn = synchronizedList(new ArrayList<>()) ;
-        System.out.println("[TRACKER] my ip and port are:"+ ip +":"+ Tracker.PORT);
+        PeerLogSystem.writeln("[TRACKER] my ip and port are:"+ ip +":"+ Tracker.PORT);
         STOP_TRACKER = false;
     }
 
@@ -50,9 +50,9 @@ class Tracker implements Runnable{
         try {
             start();
         } catch (IOException e) {
-            System.out.println("[TRACKER] STOP ACCEPTING");
+            PeerLogSystem.writeln("[TRACKER] STOP ACCEPTING");
         }
-        System.out.println("[TRACKER] SHUT DOWN");
+        PeerLogSystem.writeln("[TRACKER] SHUT DOWN");
     }
 
 
@@ -82,19 +82,19 @@ class Tracker implements Runnable{
                 if(peer != null) {
                     if(rqst_type.equals(new String(Courier.PSPacket.SWJ))) {
                         tracker.swarn.add(peer);
-                        System.out.println("[TRACKER] " + peer + " has joined the swarn");
+                        PeerLogSystem.writeln("[TRACKER] " + peer + " has joined the swarn");
                     }
 
                     if(rqst_type.equals(new String(Courier.PSPacket.SWE))) {
                         tracker.swarn.remove(peer);
-                        System.out.println("[TRACKER] " + peer + " has exited the swarn");
+                        PeerLogSystem.writeln("[TRACKER] " + peer + " has exited the swarn");
                     }
 
                     if(rqst_type.equals(new String(Courier.PSPacket.FIN))) {
-                        System.out.println("[TRACKER] " + peer + " second the connection");
+                        PeerLogSystem.writeln("[TRACKER] " + peer + " second the connection");
                     }
                     if(rqst_type.equals(new String(Courier.PSPacket.FIN))) {
-                        System.out.println("[TRACKER] " + peer + " first check the connection");
+                        PeerLogSystem.writeln("[TRACKER] " + peer + " first check the connection");
                     }
 
                 }
@@ -103,7 +103,7 @@ class Tracker implements Runnable{
                 e.printStackTrace();
             }
 
-            System.out.println("[CLIENT HANDLER] SHUT DOWN");
+            PeerLogSystem.writeln("[CLIENT HANDLER] SHUT DOWN");
 
 
         }
