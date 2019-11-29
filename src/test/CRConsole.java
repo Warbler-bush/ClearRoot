@@ -3,6 +3,7 @@ import PNPLibrary.NetworkManger;
 import PNPLibrary.Safezone;
 
 import java.io.IOException;
+import java.sql.SQLOutput;
 import java.util.ResourceBundle;
 import java.util.Scanner;
 
@@ -123,6 +124,18 @@ public class CRConsole {
                     if(sz.removeResource(fields[1]))
                         System.out.println("RESOURCE NOT FOUND");
 
+                }else System.out.println("CHOOSE A SAFEZONE FIRST");
+                continue;
+            }
+
+            if(cmd.equals("rfu")){
+                if(fields.length != 2){
+                    System.out.println("USAGE: rfu RESOURCE_NAME");
+                    continue;
+                }
+
+                if(sz != null){
+                    sz.report_modification_file(fields[1]);
                 }else System.out.println("CHOOSE A SAFEZONE FIRST");
                 continue;
             }

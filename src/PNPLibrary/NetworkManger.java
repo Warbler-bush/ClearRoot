@@ -5,6 +5,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class NetworkManger {
 
@@ -19,13 +21,13 @@ public class NetworkManger {
     private static String myIP = null;
 
 
+    private  static boolean hasConnectivity = false;
+
     /*connection test*/
     private static final String DNS_HOST = "8.8.8.8";
-    private static final int DNS_PORT = 53;
 
     /*connection test in localhost*/
-    private static final String GOD_TRACKER_IP = "192.168.1.59";
-    private static final int GOD_TRACKER_PORT = Tracker.PORT;
+    private static final String GOD_TRACKER_IP = "127.0.0.1";
 
     private static  boolean LO = false;
     /*------------------------------------------------*/
@@ -59,6 +61,14 @@ public class NetworkManger {
     /*----------------------------------*/
 
 
+    private synchronized static void setConnectivity(boolean hasConnectivity){
+        NetworkManger.hasConnectivity = hasConnectivity;
+    }
+
+    public synchronized  static boolean getConnectivity(){
+        return hasConnectivity;
+    }
+
     public static void init(){
             init(false);
 
@@ -78,6 +88,31 @@ public class NetworkManger {
         NetworkManger.isTracker = isTracker;
         NetworkManger.myIP = ip;
         NetworkManger.LO = isLO;
+
+        TimerTask repeatedTask = new TimerTask() {
+            public void run() {
+                try {
+
+                    InetAddress addr =  InetAddress.getByName("8.8.8.8");
+
+
+                    boolean hasCon =  addr.isReachable(500);
+                    if(!hasConnectivity && hasCon)
+                        NetworkManger.manager().syn();
+
+                    hasConnectivity = hasCon;
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        Timer timer = new Timer("Connectivity check");
+
+        int delay  = 1000;
+        int period = 2000;
+        timer.scheduleAtFixedRate(repeatedTask, delay, period);
     }
 
     public static void init(boolean isTracker,String ip){
@@ -269,8 +304,6 @@ public class NetworkManger {
             }
 
             br.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -321,23 +354,22 @@ public class NetworkManger {
     }
 
     /*checks if the host has Internet, NOT TEST FOR LOOPBACK*/
-    private boolean hasConnection(String ip,int port){
-        Courier courier = CourierManager.Manager().createCourier();
+    private boolean hasConnection(String ip){
         boolean ret = false;
         try {
-            courier.connect(ip,port);
-            courier.disconnect();
-            ret = true;
+            InetAddress addr = InetAddress.getByName(ip);
+            ret = addr.isReachable(500);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Can't reach "+ip);
         }
+
         return ret;
     }
 
     public boolean hasConnection(){
         if(isLO())
-            return hasConnection(GOD_TRACKER_IP,GOD_TRACKER_PORT);
-        else return hasConnection(DNS_HOST,DNS_PORT);
+            return hasConnection(GOD_TRACKER_IP);
+        else return hasConnection(DNS_HOST);
     }
 
 

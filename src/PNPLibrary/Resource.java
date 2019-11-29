@@ -86,10 +86,15 @@ public class Resource{
         this.local_modified = local_modified;
     }
 
-    public void addLog(BaseLog log){
-        if(NetworkManger.manager().hasConnection())
+    public boolean addLog(BaseLog log){
+        if(NetworkManger.manager().hasConnection()){
             addLog_online(log);
-        else addLog_local(log);
+            return true;
+        }
+        else {
+            addLog_local(log);
+            return false;
+        }
     }
 
     void addLog_online(BaseLog log){
@@ -102,15 +107,29 @@ public class Resource{
 
 
     public String getFullOnlineLog(){
+        return getFullLog(false);
+    }
+
+    String getFullLocalLog(){
+        return getFullLog(true);
+    }
+
+    private String getFullLog(boolean isLocal){
         String ret = "";
-        for(int i = log_file_online.size()-1; i>= 0; i--) {
+
+        int size = isLocal ? log_file_local.size()-1 : log_file_online.size()-1 ;
+
+        for(int i =  size ; i>= 0; i--) {
             ret+="\r\n";
-            BaseLog log = log_file_online.get(i);
+            BaseLog log = isLocal ? log_file_local.get(i) : log_file_online.get(i);
             ret += log.toLog();
         }
 
         return ret;
     }
+
+
+
 
     public void clear_online_log(){
         log_file_online.clear();

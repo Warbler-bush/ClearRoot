@@ -178,19 +178,22 @@ public class Safezone {
     }
 
     private void update_file(String file) {
-        getResource(file).addLog(new BaseLog(new Date(), new String( Courier.PSPacket.RFU),NetworkManger.getMyIP()));
-        update_log_file();
+        boolean hasConnection = getResource(file).addLog(new BaseLog(new Date(), new String( Courier.PSPacket.RFU),NetworkManger.getMyIP()));
 
-        for (String keeper_ip: keepers_ip ) {
-            try {
-                courier.connect(keeper_ip);
-                courier.report_file_update(safezone_id, password, file);
-                courier.disconnect();
-            } catch (IOException e) {
-                System.out.println(keeper_ip+" is unreachable");
+        if(hasConnection){
+            update_online_log_file();
+
+            for (String keeper_ip: keepers_ip ) {
+                try {
+                    courier.connect(keeper_ip);
+                    courier.report_file_update(safezone_id, password, file);
+                    courier.disconnect();
+                } catch (IOException e) {
+                    System.out.println(keeper_ip+" is unreachable");
+                }
+
             }
-
-        }
+        }else update_local_log_file();
 
 
     }
@@ -382,28 +385,43 @@ public class Safezone {
     }
 
     /*rewrite the current log file*/
-     void update_log_file() {
-        StringBuilder log  = new StringBuilder();
+     void update_online_log_file() {
+        update_log_file(false);
+     }
 
+    void update_local_log_file() {
+        update_log_file(true);
+    }
+
+    private void update_log_file(boolean isLocal){
+        StringBuilder log  = new StringBuilder();
         for(int i = 0 ; i< resources.size()-1; i++) {
             Resource res = resources.get(i);
             log.append("#").append(i + 1);
-            log.append(res.getFullOnlineLog());
+            log.append( isLocal ? res.getFullLocalLog() : res.getFullOnlineLog());
             log.append("\r\n");
         }
 
-         Resource res = resources.get(resources.size()-1);
-         log.append("#").append(resources.size());
-         log.append(res.getFullOnlineLog());
+
+        if(resources.size() != 0) {
+            Resource res = resources.get(resources.size() - 1);
+            log.append("#").append(resources.size());
+            log.append(isLocal ? res.getFullLocalLog() : res.getFullOnlineLog());
+        }
 
 
+        try {
+            Files.write(Paths.get(isLocal ? getLocalLogPath() : getCloudLogPath()), log.toString().getBytes());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
-         try {
-             Files.write(Paths.get(getCloudLogPath()), log.toString().getBytes());
-         } catch (IOException e) {
-             e.printStackTrace();
-         }
-     }
+    public void update_log_file(){
+         if(NetworkManger.manager().hasConnection())
+             update_log_file(false);
+         else update_log_file(true);
+    }
 
 
 
@@ -582,11 +600,11 @@ public class Safezone {
         return isSyn;
     }
 
-    public String getLocalLogPath(){
+    private String getLocalLogPath(){
         return getFolderPath()+"\\"+getID()+"_log_local.rs";
     }
 
-    public String getCloudLogPath(){
+    String getCloudLogPath(){
         return getFolderPath()+"\\"+getID()+"_log.rs";
     }
 
@@ -594,7 +612,7 @@ public class Safezone {
 
     public String getResourcePath(String filename){return getFolderPath()+"\\"+filename;}
 
-    public Resource getResource(String name){
+    Resource getResource(String name){
         for(int i = 0; i< resources.size(); i++)
             if(resources.get(i).getName().equals(name))
                 return resources.get(i);
@@ -700,7 +718,9 @@ public class Safezone {
         Resource res = new Resource(fname);
         resources.add(res);
         res.addLog(new BaseLog(new Date(), new String(Courier.PSPacket.RFA),NetworkManger.getMyIP()) );
+
         update_log_file();
+
         update_safezone_file();
 
         report_add_file(res);
@@ -765,7 +785,7 @@ public class Safezone {
         return true;
     }
 
-    public void report_safezone_join(){
+    void report_safezone_join(){
         Courier courier = CourierManager.Manager().createCourier();
 
         for (String ip: keepers_ip) {
