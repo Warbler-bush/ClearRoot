@@ -18,7 +18,10 @@ public class CRConsole {
         String root = "DefaultUser";
         String cur_idc = ""+INDICATOR_DEFAULT;
 
-        NetworkManger.init(false,false);
+        boolean isTracker = false;
+        boolean isLO = false;
+
+        NetworkManger.init(isTracker,isLO);
         NetworkManger.setSafezonesListPathRoot(root);
         NetworkManger.setSafezoneManagerFolderPathRoot(root);
         NetworkManger manager =NetworkManger.manager();

@@ -48,6 +48,8 @@ public class NetworkManger {
     /*SAFEZONE MANAGER*/
     private SafezoneManager safezoneManager = null;
 
+    private Timer timer = null;
+
     /*NENTWORK MANAGER*/
     private static NetworkManger manager = null;
 
@@ -76,7 +78,24 @@ public class NetworkManger {
         NetworkManger.isTracker = isTracker;
         NetworkManger.myIP = ip;
         NetworkManger.LO = isLO;
+    }
 
+    public static void init(boolean isTracker,String ip){
+        init(isTracker,ip,false);
+    }
+
+    public static void init(boolean isTracker, boolean isLO){
+        try {
+            init(isTracker,InetAddress.getLocalHost().getHostAddress(),isLO);
+        } catch (UnknownHostException e) {
+            PeerLogSystem.writeln("WTF, YOU DONT KNOW YOURSELF IP?");
+        }
+    }
+
+
+    /*Timer manager methods*/
+
+    private void startTimer(){
         TimerTask repeatedTask = new TimerTask() {
             public void run() {
                 try {
@@ -95,24 +114,17 @@ public class NetworkManger {
             }
         };
 
-        Timer timer = new Timer("Connectivity check");
+        timer = new Timer("Connectivity check");
 
         int delay  = 1000;
         int period = 2000;
         timer.scheduleAtFixedRate(repeatedTask, delay, period);
     }
 
-    public static void init(boolean isTracker,String ip){
-        init(isTracker,ip,false);
+    private void endTimer(){
+        timer.cancel();
     }
 
-    public static void init(boolean isTracker, boolean isLO){
-        try {
-            init(isTracker,InetAddress.getLocalHost().getHostAddress(),isLO);
-        } catch (UnknownHostException e) {
-            PeerLogSystem.writeln("WTF, YOU DONT KNOW YOURSELF IP?");
-        }
-    }
 
     /*before calling the manager the client of this library should first call init() */
     public static NetworkManger manager(){
@@ -142,6 +154,8 @@ public class NetworkManger {
     /*the ip attribute is used for debugging*/
     private NetworkManger(boolean isTracker,String ip) throws IOException {
 
+        startTimer();
+
         safezoneManager = SafezoneManager.Manager();
 
         PeerLogSystem.write("[NETWORK MANAGER] starting the tracker...");
@@ -163,8 +177,6 @@ public class NetworkManger {
         server = new ServerSocket_n(ip, Courier.PORT);
         server.start();
         PeerLogSystem.writeln("DONE");
-
-
 
 
         /*GETTING THE TRACKER AND LOADING THE ID OF THE SAFEZONES*/
@@ -317,9 +329,10 @@ public class NetworkManger {
     public void shut_down(){
 
         try {
-            /*still need to fix*/
             Courier courier = CourierManager.Manager().createCourier();
             courier.exit_swarn(getMyTracker());
+
+            endTimer();
 
             CourierManager.Manager().disconnenct_all();
             server.stopRunning();
@@ -328,6 +341,7 @@ public class NetworkManger {
             PeerLogSystem.writeln("[NETWORK MANAGER] TRACKER SUCCESSFULLY STOPPED");
         }
 
+        PeerLogSystem.close();
         Tracker.STOP_TRACKER = true;
         ServerSocket_n.STOP_SERVER = true;
     }

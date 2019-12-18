@@ -1,6 +1,5 @@
 package PNPLibrary;
 
-import javafx.util.Pair;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -12,6 +11,7 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
+import java.util.Map;
 
 /*------------------------------------------------------------------------------------*/
 /* COURIER                                                                           */
@@ -917,6 +917,34 @@ class TrackerCourier extends Courier{
         // not sending request decline because it's a error of sender, it's not even a request.
         client.send(PSPacket.ERR_MSG_C().toBinary());
         return null;
+    }
+
+}
+
+
+class Pair<K, V> implements Map.Entry {
+    private final K key;
+    private V value;
+
+    Pair(K s1, V s2){
+        key = s1;
+        value = s2;
+    }
+
+    @Override
+    public String getKey() {
+        return (String) key;
+    }
+
+    @Override
+    public String getValue() {
+        return (String) value;
+    }
+
+    @Override
+    public Object setValue(Object value) {
+        this.value = (V) value;
+        return this;
     }
 
 }
